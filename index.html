@@ -100,7 +100,7 @@
         #volume-control {
             position: fixed;
             top: 20px;
-            right: 430px;
+            right: 370px;
             width: 50px;
             height: 50px;
             background: rgba(200, 200, 200, 0.95);
@@ -122,14 +122,14 @@
         }
         
         #controls.collapsed ~ #volume-control {
-            right: 200px;
+            right: 140px;
         }
 
         /* Fish toggle - match style of other top-right controls */
         #fish-toggle {
             position: fixed;
             top: 20px;
-            right: 370px;
+            right: 430px;
             width: 50px;
             height: 50px;
             background: rgba(200, 200, 200, 0.95);
@@ -143,16 +143,17 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            font-size: 0; /* icon only */
+            font-size: 24px;
         }
 
         #fish-toggle:hover {
             background: rgba(180, 180, 180, 0.95);
             transform: scale(1.05);
+            
         }
 
         #controls.collapsed ~ #fish-toggle {
-            right: 140px;
+            right: 200px;
         }
 
         /* Active state for fish toggle */
@@ -948,13 +949,7 @@
         </svg>
     </button>
 
-    <button id="fish-toggle" title="Toggle Fish">
-        <!-- Inlined project fish icon (scaled by .icon-svg). Body uses currentColor so it matches other icons; eye kept white for contrast. -->
-        <svg class="icon-svg" viewBox="0 0 433.46 132.8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-            <path d="M.04,62.77c3.17-30.21,185.19-73.94,312.12-1.77,49.1,27.92,78.55,66.69,101.06,55.15,29.26-15.02,25.42-104.13-2.77-115.09-30.9-12.01-60.71,81.6-149.8,117.19C147.29,163.53-2.94,91.26.04,62.77Z" fill="currentColor"/>
-            <circle cx="55.54" cy="55.38" r="6.25" fill="#fff" />
-        </svg>
-    </button>
+    <button id="fish-toggle" title="Toggle Fish">🐟</button>
     <button id="audio-control" title="Toggle Music">♪</button>
     <audio id="bg-audio" preload="auto" loop></audio>
     
@@ -1022,12 +1017,8 @@
     
     <div id="history-modal">
         <div id="history-content">
-            <div style="display:flex; gap:12px; margin-bottom:18px;">
-                <button id="tab-word-history" class="history-btn" style="flex:1; background:#1976d2; color:#fff;">Word History</button>
-                <button id="tab-sentence-revision" class="history-btn" style="flex:1; background:#fff; color:#1976d2; border:1px solid #1976d2;">Sentence Revisions</button>
-            </div>
+            <h2>Typing History</h2>
             <div id="history-list"></div>
-            <div id="sentence-list" style="display:none;"></div>
             <div class="history-buttons">
                 <button class="history-btn close" id="close-history">Close</button>
                 <button class="history-btn clear" id="clear-history">Clear History</button>
@@ -1078,19 +1069,25 @@
         let resetTimeout;
         let currentLineChars = [];
         let totalLineWidth = 0;
-    let currentWord = '';
-    let currentSentence = '';
-    let typingHistory = [];
-    let sentenceHistory = [];
-    let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
-    let currentVolume = 0.5;
+        let currentWord = '';
+        let typingHistory = [];
+        let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
+        // 默认改为 ocean（2），并在加载时激活对应背景，使页面初始不为空白
+        currentBackground = 2;
+         
+         const backgrounds = [
+             { element: null, icon: createRectIcon(), name: 'none' },
+             { element: forestBg, icon: createTreeIcon(), name: 'forest' },
+             { element: oceanBg, icon: createWaveIcon(), name: 'ocean' },
+             { element: mountainBg, icon: createMountainIcon(), name: 'mountain' }
+         ];
+        // Activate initial background and update toggle icon
+        if (backgrounds[currentBackground] && backgrounds[currentBackground].element) {
+            backgrounds[currentBackground].element.classList.add('active');
+            backgroundToggle.innerHTML = backgrounds[currentBackground].icon;
+        }
         
-        const backgrounds = [
-            { element: null, icon: createRectIcon(), name: 'none' },
-            { element: forestBg, icon: createTreeIcon(), name: 'forest' },
-            { element: oceanBg, icon: createWaveIcon(), name: 'ocean' },
-            { element: mountainBg, icon: createMountainIcon(), name: 'mountain' }
-        ];
+        let currentVolume = 0.5;
         
         // Create SVG icons
         function createRectIcon() {
@@ -1151,135 +1148,24 @@
             }
         }
         
-        // Render word history only
-        function renderWordHistory() {
+        // Render history list
+        function renderHistory() {
             if (typingHistory.length === 0) {
                 historyList.innerHTML = '<div class="history-empty" style="color: #999; font-style: italic; padding: 40px 20px; text-align: center;">No words typed yet. Start typing to build your history!</div>';
             } else {
-                let html = '';
-                html += '<div>';
-                html += typingHistory
+                // Join all words into a continuous paragraph, showing corrections
+                const paragraph = typingHistory
                     .map(item => {
                         if (item.original && item.original !== item.text) {
-                            return `<span style=\"color: #ff6b6b; text-decoration: line-through;\">${item.original}</span> <span style=\"color: #51cf66;\">${item.text}</span>`;
+                            // Show both original and corrected
+                            return `<span style="color: #ff6b6b; text-decoration: line-through;">${item.original}</span> <span style="color: #51cf66;">${item.text}</span>`;
                         } else {
                             return item.text;
                         }
                     })
                     .join(' ');
-                html += '</div>';
-                historyList.innerHTML = html;
+                historyList.innerHTML = paragraph;
             }
-        }
-
-        // Render sentence revision history only
-        function renderSentenceHistory() {
-            const sentenceList = document.getElementById('sentence-list');
-            if (sentenceHistory.length === 0) {
-                sentenceList.innerHTML = '<div class="history-empty" style="color: #999; font-style: italic; padding: 40px 20px; text-align: center;">No revised sentences yet. Type a sentence ending with a period to see revisions!</div>';
-            } else {
-                let html = '';
-                html += '<div>';
-                html += sentenceHistory.map(item => {
-                    // Show revised sentence in italic Times New Roman, black, no highlight
-                    return `<span style=\"font-family:'Times New Roman',serif; font-style:italic; color:#000; margin-right:8px;\">${item.text}</span>`;
-                }).join(' ');
-                html += '</div>';
-                sentenceList.innerHTML = html;
-            }
-        }
-
-        // Tab switching logic
-        const tabWordHistory = document.getElementById('tab-word-history');
-        const tabSentenceRevision = document.getElementById('tab-sentence-revision');
-        const sentenceList = document.getElementById('sentence-list');
-        tabWordHistory.addEventListener('click', function() {
-            tabWordHistory.style.background = '#1976d2';
-            tabWordHistory.style.color = '#fff';
-            tabSentenceRevision.style.background = '#fff';
-            tabSentenceRevision.style.color = '#1976d2';
-            tabSentenceRevision.style.border = '1px solid #1976d2';
-            historyList.style.display = '';
-            sentenceList.style.display = 'none';
-            renderWordHistory();
-        });
-        tabSentenceRevision.addEventListener('click', function() {
-            tabSentenceRevision.style.background = '#1976d2';
-            tabSentenceRevision.style.color = '#fff';
-            tabWordHistory.style.background = '#fff';
-            tabWordHistory.style.color = '#1976d2';
-            tabWordHistory.style.border = '1px solid #1976d2';
-            historyList.style.display = 'none';
-            sentenceList.style.display = '';
-            renderSentenceHistory();
-        });
-
-        // When opening modal, default to word history
-        function renderHistory() {
-            tabWordHistory.click();
-        }
-        // Add sentence to history with DeepSeek revision
-        async function addSentenceToHistory(sentence) {
-            if (sentence.trim().length > 0) {
-                try {
-                    const revised = await autoReviseSentence(sentence.trim());
-                    sentenceHistory.push({
-                        text: revised,
-                        timestamp: new Date().toISOString()
-                    });
-                    saveHistory();
-                    console.log(`Sentence revised: ${sentence} → ${revised}`);
-                } catch (error) {
-                    sentenceHistory.push({
-                        text: sentence,
-                        timestamp: new Date().toISOString()
-                    });
-                    saveHistory();
-                    console.log(`Saved original sentence to history: ${sentence}`);
-                }
-            }
-        }
-
-        // DeepSeek sentence revision
-        async function autoReviseSentence(sentence) {
-            // Check if API key is set
-            if (DEEPSEEK_CONFIG.apiKey === 'YOUR_DEEPSEEK_API_KEY' || !DEEPSEEK_CONFIG.apiKey) {
-                // Fallback: return sentence unchanged
-                return sentence;
-            }
-            try {
-                const revised = await callDeepSeekSentenceRevision(sentence);
-                return revised;
-            } catch (error) {
-                return sentence;
-            }
-        }
-
-        async function callDeepSeekSentenceRevision(sentence) {
-            const response = await fetch(DEEPSEEK_CONFIG.apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${DEEPSEEK_CONFIG.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: DEEPSEEK_CONFIG.model,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: `Please check and revise this sentence for grammar, spelling, and clarity. If it is already correct, return it unchanged. Sentence: \"${sentence}\". Return only the revised sentence, nothing else.`
-                        }
-                    ],
-                    max_tokens: 100,
-                    temperature: 0.3
-                })
-            });
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-            const data = await response.json();
-            const revised = data.choices[0].message.content.trim();
-            return revised || sentence;
         }
         
         // Toggle history modal
@@ -1384,17 +1270,6 @@
                 'piss': '٩(◕‿◕)۶',
                 'dick': '(╯°□°）╯︵ ┻━┻',
                 'cock': '(╯︵╰,)',
-                'pussy': '٩(◕‿◕)۶',
-                'fag': '(╯°□°）╯︵ ┻━┻',
-                'gay': '(╯︵╰,)',
-                'retard': '٩(◕‿◕)۶',
-                'stupid': '(╯°□°）╯︵ ┻━┻',
-                'idiot': '(╯︵╰,)',
-                'moron': '٩(◕‿◕)۶',
-                'bastard': '(╯°□°）╯︵ ┻━┻',
-                'whore': '(╯︵╰,)',
-                'slut': '٩(◕‿◕)۶',
-                'bitch': '(╯°□°）╯︵ ┻━┻',
                 'fucking': '(╯︵╰,)',
                 'shitty': '٩(◕‿◕)۶',
                 'damned': '(╯°□°）╯︵ ┻━┻',
@@ -1533,7 +1408,7 @@
             fishToggle.addEventListener('click', function(e) {
                 e.stopPropagation();
                 fishEnabled = !fishEnabled;
-                if (window.FishFX) {
+                if (jiwindow.FishFX) {
                     if (fishEnabled) window.FishFX.enable(); else window.FishFX.disable();
                 }
                 updateFishToggleUI();
@@ -1813,56 +1688,40 @@
         // Handle typing
         document.addEventListener('keypress', function(e) {
             if (e.target.tagName === 'INPUT') return;
+            
             const char = e.key;
             if (char.length !== 1) return;
-
+            
             // Reset on space and save current word with auto-correction
             if (char === ' ') {
                 if (currentWord.length > 0) {
+                    // Auto-correct and save to history
                     addToHistory(currentWord.trim());
                     currentWord = '';
                 }
-                currentSentence += ' ';
                 charPosition = 0;
                 return;
             }
-
-            // Add character to current word and sentence
+            
+            // Add character to current word
             currentWord += char;
-            currentSentence += char;
-
+            
             clearTimeout(resetTimeout);
             createFloatingText(char, charPosition);
             charPosition++;
-
-            // If period, treat as end of sentence
-            if (char === '.') {
-                // Save current word if any
-                if (currentWord.length > 0) {
-                    addToHistory(currentWord.trim());
-                    currentWord = '';
-                }
-                // Save sentence for revision
-                const sentenceToCheck = currentSentence.trim();
-                if (sentenceToCheck.length > 0) {
-                    addSentenceToHistory(sentenceToCheck);
-                }
-                currentSentence = '';
-                charPosition = 0;
-                return;
-            }
-
+            
             // Auto-reset after 1 second of no typing with auto-correction
             resetTimeout = setTimeout(async () => {
                 if (currentWord.length > 0) {
+                    // Auto-correct and save to history
                     await addToHistory(currentWord.trim());
                     currentWord = '';
                 }
                 charPosition = 0;
-            }, 1000);
+            }, 1000); // Increased to 1 second for better auto-correction
         });
         
-        // Reset position on Enter and save word/sentence
+        // Reset position on Enter and save word
         document.addEventListener('keydown', function(e) {
             // Tab to toggle history
             if (e.key === 'Tab') {
@@ -1870,15 +1729,12 @@
                 toggleHistory();
                 return;
             }
-
+            
             if (e.key === 'Enter') {
                 if (currentWord.length > 0) {
+                    // Auto-correct and save to history
                     addToHistory(currentWord.trim());
                     currentWord = '';
-                }
-                if (currentSentence.trim().length > 0) {
-                    addSentenceToHistory(currentSentence.trim());
-                    currentSentence = '';
                 }
                 charPosition = 0;
             }
@@ -1935,57 +1791,61 @@
                 minIntervalMs: 90,
                 maxConcurrency: 20,
                 fishEmojis: ['🐠', '🐡', '🐟'],
+                birdEmojis: ['🐦','🦋','🕊️'], // mountain 背景使用的鸟类
+                forestEmojis: ['🦔','🐿️','🦨'], // forest 背景使用的陆生小动物
+                peacockEmoji: '🦚',            // forest 背景下 Enter 使用
                 sharkEmoji: '🦈',
-                useArcProb: 0,
-                attachListener: false
+                eagleEmoji: '🦅',              // mountain 背景下 Enter 使用
+                 useArcProb: 0,
+                 attachListener: false
             };
 
-            const state = {
-                layer: null,
-                lastTs: 0,
-                enabled: true
-            };
+             const state = {
+                 layer: null,
+                 lastTs: 0,
+                 enabled: true
+             };
 
-            function init() {
-                state.layer = document.getElementById('fish-layer');
-                if (!state.layer) {
-                    console.warn('[FishFX] 未找到 #fish-layer，已自动创建。');
-                    const el = document.createElement('div');
-                    el.id = 'fish-layer';
-                    el.setAttribute('aria-hidden', 'true');
-                    document.body.appendChild(el);
-                    state.layer = el;
-                }
-            }
+             function init() {
+                 state.layer = document.getElementById('fish-layer');
+                 if (!state.layer) {
+                     console.warn('[FishFX] 未找到 #fish-layer，已自动创建。');
+                     const el = document.createElement('div');
+                     el.id = 'fish-layer';
+                     el.setAttribute('aria-hidden', 'true');
+                     document.body.appendChild(el);
+                     state.layer = el;
+                 }
+             }
 
-            function now() { return performance.now(); }
+             function now() { return performance.now(); }
 
-            function getKeyPos(key) {
-                const rows = {
-                    num: ['`','1','2','3','4','5','6','7','8','9','0','-','='],
-                    q  : ['q','w','e','r','t','y','u','i','o','p','[',']'],
-                    a  : ['a','s','d','f','g','h','j','k','l',';'],
-                    z  : ['z','x','c','v','b','n','m',',','.','/']
-                };
-                const rowYvh = { num:85, q:88, a:91, z:94 };
-                const rowShift = { num:0.0, q:0.5, a:1.0, z:1.5 };
+             function getKeyPos(key) {
+                 const rows = {
+                     num: ['`','1','2','3','4','5','6','7','8','9','0','-','='],
+                     q  : ['q','w','e','r','t','y','u','i','o','p','[',']'],
+                     a  : ['a','s','d','f','g','h','j','k','l',';'],
+                     z  : ['z','x','c','v','b','n','m',',','.','/']
+                 };
+                 const rowYvh = { num:85, q:88, a:91, z:94 };
+                 const rowShift = { num:0.0, q:0.5, a:1.0, z:1.5 };
 
-                key = String(key || '').toLowerCase();
-                for (const r of ['num','q','a','z']) {
-                    const arr = rows[r];
-                    const idx = arr.indexOf(key);
-                    if (idx !== -1) {
-                        const vw = innerWidth, vh = innerHeight;
-                        const colW = vw / (arr.length + 2);
-                        const colIndex = idx + 1 + rowShift[r];
-                        const x = colW * (colIndex + 0.5) + (Math.random() - 0.5) * 20;
-                        const y = vh * (rowYvh[r] / 100) + (Math.random() - 0.5) * 10;
-                        return { x, y };
-                    }
-                }
-                if (key === ' ') return { x: innerWidth * 0.5, y: innerHeight * 0.95 };
-                return null;
-            }
+                 key = String(key || '').toLowerCase();
+                 for (const r of ['num','q','a','z']) {
+                     const arr = rows[r];
+                     const idx = arr.indexOf(key);
+                     if (idx !== -1) {
+                         const vw = innerWidth, vh = innerHeight;
+                         const colW = vw / (arr.length + 2);
+                         const colIndex = idx + 1 + rowShift[r];
+                         const x = colW * (colIndex + 0.5) + (Math.random() - 0.5) * 20;
+                         const y = vh * (rowYvh[r] / 100) + (Math.random() - 0.5) * 10;
+                         return { x, y };
+                     }
+                 }
+                 if (key === ' ') return { x: innerWidth * 0.5, y: innerHeight * 0.95 };
+                 return null;
+             }
 
             function getRandomPos() {
                 const marginX = Math.max(20, innerWidth * 0.05);
@@ -1995,75 +1855,112 @@
                 return { x, y };
             }
             
-            function spawnAt(pos, { emoji, isShark = false } = {}) {
-                if (!state.enabled || !state.layer || !pos) return;
-                if (state.layer.children.length >= cfg.maxConcurrency && !isShark) return;
-
-                const el = document.createElement('span');
-                el.className = 'fish' + (isShark ? ' shark' : '');
-                el.textContent = emoji || cfg.fishEmojis[0];
-                el.style.left = pos.x + 'px';
-                el.style.top  = pos.y + 'px';
-
-                if (!isShark) {
-                    el.style.fontSize = (1.6 + Math.random() * 1.0) + 'rem';
-                    el.style.animationDuration = (1.5 + Math.random() * 0.8) + 's';
-                    if (cfg.useArcProb > 0 && Math.random() < cfg.useArcProb) el.classList.add('arc');
-                }
-
-                el.addEventListener('animationend', () => el.remove());
-                state.layer.appendChild(el);
-                return el;
+            // 判断是否处于 forest 背景（使用 currentBackground 变量）
+            function isForestActive() {
+                try {
+                    return typeof currentBackground !== 'undefined' && currentBackground === 1;
+                } catch (e) { return false; }
             }
+
+             // 判断是否处于 mountain 背景（使用 currentBackground 变量）
+             function isMountainActive() {
+                 try {
+                     return typeof currentBackground !== 'undefined' && currentBackground === 3;
+                 } catch (e) { return false; }
+             }
+
+            // 根据当前背景选择普通 emoji（鱼/鸟/陆生小动物）
+            function chooseNormalEmoji() {
+                if (isForestActive()) {
+                    const pool = cfg.forestEmojis && cfg.forestEmojis.length ? cfg.forestEmojis : ['🦔','🐿️','🦨'];
+                    return pool[(Math.random() * pool.length) | 0];
+                }
+                if (isMountainActive()) {
+                    const pool = cfg.birdEmojis && cfg.birdEmojis.length ? cfg.birdEmojis : ['🐦','🦋','🕊️'];
+                    return pool[(Math.random() * pool.length) | 0];
+                }
+                const pool = cfg.fishEmojis && cfg.fishEmojis.length ? cfg.fishEmojis : ['🐠','🐡','🐟'];
+                return pool[(Math.random() * pool.length) | 0];
+            }
+            
+             function spawnAt(pos, { emoji, isShark = false } = {}) {
+                 if (!state.enabled || !state.layer || !pos) return;
+                 if (state.layer.children.length >= cfg.maxConcurrency && !isShark) return;
+
+                 const el = document.createElement('span');
+                 el.className = 'fish' + (isShark ? ' shark' : '');
+                 el.textContent = emoji || chooseNormalEmoji();
+                 el.style.left = pos.x + 'px';
+                 el.style.top  = pos.y + 'px';
+
+                 if (!isShark) {
+                     el.style.fontSize = (1.6 + Math.random() * 1.0) + 'rem';
+                     el.style.animationDuration = (1.5 + Math.random() * 0.8) + 's';
+                     if (cfg.useArcProb > 0 && Math.random() < cfg.useArcProb) el.classList.add('arc');
+                 }
+
+                 el.addEventListener('animationend', () => el.remove());
+                 state.layer.appendChild(el);
+                 return el;
+             }
 
             function spawnNormalByKey(key) {
                 const pos = getRandomPos();
-                const emoji = cfg.fishEmojis[(Math.random() * cfg.fishEmojis.length) | 0];
+                const emoji = chooseNormalEmoji();
                 spawnAt(pos, { emoji, isShark: false });
             }
 
             function spawnShark() {
                 const pos = getRandomPos();
-                spawnAt(pos, { emoji: cfg.sharkEmoji, isShark: true });
-            }
-
-            function onKeydown(e) {
-                if (!state.enabled) return;
-                if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
-
-                const t = now();
-                if (t - state.lastTs < cfg.minIntervalMs) return;
-                state.lastTs = t;
-
-                if (e.key === 'Enter') {
-                    spawnShark();
-                    return;
+                if (isForestActive()) {
+                    // forest 背景：Enter 生成孔雀 🦚（不是 shark 样式）
+                    spawnAt(pos, { emoji: cfg.peacockEmoji || '🦚', isShark: false });
+                } else if (isMountainActive()) {
+                    // mountain 背景：Enter 生成猛禽 🦅（不是 shark 样式）
+                    spawnAt(pos, { emoji: cfg.eagleEmoji || '🦅', isShark: false });
+                } else {
+                    // 其它场景：正常鲨鱼
+                    spawnAt(pos, { emoji: cfg.sharkEmoji, isShark: true });
                 }
-                spawnNormalByKey(e.key);
             }
 
-            const FishFX = {
-                init,
-                onKeydown,
-                spawnShark,
-                spawnAt,
-                enable()  { state.enabled = true;  },
-                disable() { state.enabled = false; },
-                config(patch = {}) { Object.assign(cfg, patch); },
-            };
+             function onKeydown(e) {
+                 if (!state.enabled) return;
+                 if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
 
-            function autoInit() {
-                init();
-            }
+                 const t = now();
+                 if (t - state.lastTs < cfg.minIntervalMs) return;
+                 state.lastTs = t;
 
-            global.FishFX = FishFX;
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', autoInit, { once: true });
-            } else {
-                autoInit();
-            }
+                 if (e.key === 'Enter') {
+                     spawnShark();
+                     return;
+                 }
+                 spawnNormalByKey(e.key);
+             }
 
-        })(window);
+             const FishFX = {
+                 init,
+                 onKeydown,
+                 spawnShark,
+                 spawnAt,
+                 enable()  { state.enabled = true;  },
+                 disable() { state.enabled = false; },
+                 config(patch = {}) { Object.assign(cfg, patch); },
+             };
+
+             function autoInit() {
+                 init();
+             }
+
+             global.FishFX = FishFX;
+             if (document.readyState === 'loading') {
+                 document.addEventListener('DOMContentLoaded', autoInit, { once: true });
+             } else {
+                 autoInit();
+             }
+
+         })(window);
         
         // Integrate fish effect with existing typing functionality
         document.addEventListener('keypress', function(e) {

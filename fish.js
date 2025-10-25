@@ -10,7 +10,9 @@
     minIntervalMs: 90,          // 触发最小间隔（节流）
     maxConcurrency: 20,         // 同时存在的普通鱼数量上限
     fishEmojis: ['🐠', '🐡', '🐟'], // 普通鱼图标（已增加河豚 🐡）
-    sharkEmoji: '🦈',           // 鲨鱼图标
+    birdEmojis: ['🐦', '🦜', '🕊️'], // 切换到 mountain 背景时使用的鸟类
+    sharkEmoji: '🦈',           // 海洋/普通场景的 Enter（鲨鱼）
+    eagleEmoji: '🦅',           // mountain 场景的 Enter（猛禽）
     useArcProb: 0,              // 若你定义了 .fish.arc，可改成 0.35
     attachListener: false       // ❗不自动监听键盘（交由 CalmTyping 调用）
   };
@@ -95,19 +97,68 @@
     return el;
   }
 
-  // 普通鱼：改为在视口随机位置出现（以前主要集中在底部键位映射）
-  function spawnNormalByKey(key) {
-    // 如果你仍想使用键位映射位置，可改成：const pos = getKeyPos(key) || getRandomPos();
-    const pos = getRandomPos();
-    const emoji = cfg.fishEmojis[(Math.random() * cfg.fishEmojis.length) | 0];
-    spawnAt(pos, { emoji, isShark: false });
+  // 判断当前是否为 mountain 背景：检测 #mountain-bg 是否存在且可见（display != none && opacity > 0）
+  function isMountainActive() {
+    try {
+      const el = document.getElementById('mountain-bg');
+      if (!el) return false;
+      const s = getComputedStyle(el);
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      // 若有透明度但很小，仍认为不可见
+      const op = parseFloat(s.opacity || '1');
+      return op > 0.05;
+    } catch (e) {
+      return false;
+    }
   }
 
-  function spawnShark() {
-    // 鲨鱼也在视口内随机出现（避免贴边）
-    const pos = getRandomPos();
-    spawnAt(pos, { emoji: cfg.sharkEmoji, isShark: true });
+  function isMountainActiveStrict() {
+    try {
+        const el = document.getElementById('mountain-bg');
+        if (!el) return false;
+        const s = getComputedStyle(el);
+        if (s.display === 'none' || s.visibility === 'hidden') return false;
+        const op = parseFloat(s.opacity || '1');
+        if (!(op > 0.05)) return false;
+        // 检查实际尺寸
+        if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+        // 检查是否在文档流中（被移出 DOM 或 detached）
+        if (!document.documentElement.contains(el)) return false;
+        // 可选：检查是否有可视区域交集
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return false;
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+  // 根据当前背景选择普通的 emoji（鱼或鸟）
+  function chooseNormalEmoji() {
+    if (isMountainActive()) {
+      const pool = cfg.birdEmojis && cfg.birdEmojis.length ? cfg.birdEmojis : ['🐦','🦜','🕊️'];
+      return pool[(Math.random() * pool.length) | 0];
+    }
+    const pool = cfg.fishEmojis && cfg.fishEmojis.length ? cfg.fishEmojis : ['🐠','🐡','🐟'];
+    return pool[(Math.random() * pool.length) | 0];
   }
+
+  // 普通鱼：改为在视口随机位置出现（以前主要集中在底部键位映射）
+  function spawnNormalByKey(key) {
+    const pos = getRandomPos();
+    const emoji = chooseNormalEmoji();
+    spawnAt(pos, { emoji, isShark: false });
+   }
+ 
+   function spawnShark() {
+    // Enter：在 mountain 背景时产出猛禽（🦅），其它场景产出鲨鱼（🦈）
+    const pos = getRandomPos();
+    if (isMountainActive()) {
+      spawnAt(pos, { emoji: cfg.eagleEmoji || '🦅', isShark: false });
+    } else {
+      spawnAt(pos, { emoji: cfg.sharkEmoji, isShark: true });
+    }
+   }
 
   // 断句算法占位（未来扩展）
   function processSentence() {
@@ -153,6 +204,11 @@
     document.addEventListener('DOMContentLoaded', autoInit, { once: true });
   } else {
     autoInit();
+  }
+
+  // 若需要自动监听全局按键（方便测试或默认行为），把 cfg.attachListener 设为 true
+  if (cfg.attachListener) {
+    document.addEventListener('keydown', FishFX.onKeydown);
   }
 
 })(window);
