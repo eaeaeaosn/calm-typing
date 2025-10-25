@@ -220,7 +220,17 @@ const initDatabase = () => {
                 console.error('Error creating user_settings table:', err);
                 return;
               }
-              console.log('PostgreSQL database initialized successfully');
+              console.log('User settings table created');
+              
+              // Add missing data column to guest_sessions if it doesn't exist
+              db.exec('ALTER TABLE guest_sessions ADD COLUMN IF NOT EXISTS data TEXT', (err) => {
+                if (err) {
+                  console.error('Error adding data column to guest_sessions:', err);
+                } else {
+                  console.log('Data column added to guest_sessions table');
+                }
+                console.log('PostgreSQL database initialized successfully');
+              });
             });
           });
         });
