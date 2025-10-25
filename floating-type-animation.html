@@ -124,6 +124,43 @@
         #controls.collapsed ~ #volume-control {
             right: 140px;
         }
+
+        /* Fish toggle - match style of other top-right controls */
+        #fish-toggle {
+            position: fixed;
+            top: 20px;
+            right: 430px;
+            width: 50px;
+            height: 50px;
+            background: rgba(200, 200, 200, 0.95);
+            border: none;
+            border-radius: 12px;
+            color: #333;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-size: 24px;
+        }
+
+        #fish-toggle:hover {
+            background: rgba(180, 180, 180, 0.95);
+            transform: scale(1.05);
+        }
+
+        #controls.collapsed ~ #fish-toggle {
+            right: 200px;
+        }
+
+        /* Active state for fish toggle */
+        #fish-toggle.active {
+            background: rgba(120, 200, 180, 0.95);
+            color: #fff;
+            transform: translateY(-1px) scale(1.03);
+        }
         
         #volume-slider-container {
             position: fixed;
@@ -884,6 +921,8 @@
             <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" fill="currentColor"/>
         </svg>
     </button>
+
+    <button id="fish-toggle" title="Toggle Fish">🐟</button>
     
     <div id="volume-slider-container">
         <input type="range" id="volume-slider-vertical" min="0" max="100" value="50" orient="vertical">
@@ -970,6 +1009,7 @@
         const volumeSliderContainer = document.getElementById('volume-slider-container');
         const volumeSlider = document.getElementById('volume-slider-vertical');
         const volumeValue = document.getElementById('volume-value');
+    const fishToggle = document.getElementById('fish-toggle');
         
         let customFontFamily = 'Courier New, monospace';
         let textColor = '#000000';
@@ -1307,6 +1347,29 @@
             e.stopPropagation();
             volumeSliderContainer.classList.toggle('show');
         });
+
+        // Fish toggle: enable/disable FishFX and update UI
+        let fishEnabled = true;
+        function updateFishToggleUI() {
+            if (!fishToggle) return;
+            fishToggle.classList.toggle('active', fishEnabled);
+            fishToggle.setAttribute('aria-pressed', fishEnabled ? 'true' : 'false');
+            fishToggle.title = fishEnabled ? 'Disable Fish' : 'Enable Fish';
+        }
+
+        if (fishToggle) {
+            fishToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                fishEnabled = !fishEnabled;
+                if (window.FishFX) {
+                    if (fishEnabled) window.FishFX.enable(); else window.FishFX.disable();
+                }
+                updateFishToggleUI();
+            });
+        }
+
+        // Initialize fish toggle UI based on default
+        updateFishToggleUI();
         
         // Close volume slider when clicking outside
         document.addEventListener('click', function(e) {
