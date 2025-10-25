@@ -332,8 +332,13 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/guest', (req, res) => {
   const guestId = uuidv4();
   
-  db.run('INSERT INTO guest_sessions (id) VALUES (?)', [guestId], function(err) {
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO guest_sessions (id) VALUES ($1)'
+    : 'INSERT INTO guest_sessions (id) VALUES (?)';
+  
+  db.run(insertQuery, [guestId], function(err) {
     if (err) {
+      console.error('Guest session creation error:', err);
       return res.status(500).json({ error: 'Failed to create guest session' });
     }
     
@@ -373,17 +378,18 @@ app.post('/api/user/data/:dataType', authenticateToken, (req, res) => {
   const userId = req.user.userId;
   const dataContent = JSON.stringify(req.body);
   
-  db.run(
-    'INSERT OR REPLACE INTO user_data (user_id, data_type, data_content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
-    [userId, dataType, dataContent],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to save data' });
-      }
-      
-      res.json({ message: 'Data saved successfully' });
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO user_data (user_id, data_type, data_content, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id, data_type) DO UPDATE SET data_content = EXCLUDED.data_content, updated_at = CURRENT_TIMESTAMP'
+    : 'INSERT OR REPLACE INTO user_data (user_id, data_type, data_content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)';
+  
+  db.run(insertQuery, [userId, dataType, dataContent], function(err) {
+    if (err) {
+      console.error('User data save error:', err);
+      return res.status(500).json({ error: 'Failed to save data' });
     }
-  );
+    
+    res.json({ message: 'Data saved successfully' });
+  });
 });
 
 // Guest data endpoints
