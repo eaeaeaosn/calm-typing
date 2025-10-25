@@ -20,6 +20,12 @@ class CalmTyping {
         this.setupEventListeners();
         this.startBackgroundMusic();
         this.typingInput.focus();
+        if (window.FishFX) {
+            FishFX.config({
+                maxConcurrency: 15,
+                fishEmojis: ['🐠', '🐟', '🐡'],
+            });
+        }
     }
     
     setupEventListeners() {
@@ -71,6 +77,7 @@ class CalmTyping {
                 this.hideHistory();
                 break;
         }
+        if (window.FishFX) window.FishFX.onKeydown(e);
     }
     
     displayCurrentWord(word) {
