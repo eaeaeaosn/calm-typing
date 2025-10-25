@@ -1,17 +1,17 @@
 class CalmTyping {
     constructor() {
-        this.typingInput = document.getElementById('typingInput');
-        this.currentWord = document.getElementById('currentWord');
+        this.currentLetter = document.getElementById('currentLetter');
         this.wordHistory = document.getElementById('wordHistory');
         this.historyList = document.getElementById('historyList');
         this.sentenceContainer = document.getElementById('sentenceContainer');
         this.backgroundMusic = document.getElementById('backgroundMusic');
         this.musicToggle = document.getElementById('musicToggle');
         
-        this.typedWords = [];
+        this.typedLetters = [];
         this.currentSentence = [];
         this.isHistoryVisible = false;
         this.isMusicPlaying = false;
+        this.currentText = '';
         
         this.init();
     }
@@ -19,16 +19,14 @@ class CalmTyping {
     init() {
         this.setupEventListeners();
         this.startBackgroundMusic();
-        this.typingInput.focus();
+        // Focus on the page to capture keyboard input
+        document.body.focus();
+        document.body.tabIndex = -1;
     }
     
     setupEventListeners() {
-        // Typing input events
-        this.typingInput.addEventListener('input', (e) => {
-            this.handleTyping(e);
-        });
-        
-        this.typingInput.addEventListener('keydown', (e) => {
+        // Global keyboard events
+        document.addEventListener('keydown', (e) => {
             this.handleKeyDown(e);
         });
         
@@ -39,25 +37,14 @@ class CalmTyping {
         
         // Click outside to hide history
         document.addEventListener('click', (e) => {
-            if (!this.wordHistory.contains(e.target) && !this.typingInput.contains(e.target)) {
+            if (!this.wordHistory.contains(e.target)) {
                 this.hideHistory();
             }
         });
     }
     
-    handleTyping(e) {
-        const input = e.target.value;
-        const words = input.trim().split(/\s+/);
-        const currentWord = words[words.length - 1];
-        
-        if (currentWord) {
-            this.displayCurrentWord(currentWord);
-        } else {
-            this.clearCurrentWord();
-        }
-    }
-    
     handleKeyDown(e) {
+        // Handle special keys
         switch(e.key) {
             case 'Tab':
                 e.preventDefault();
@@ -70,18 +57,61 @@ class CalmTyping {
             case 'Escape':
                 this.hideHistory();
                 break;
+            case 'Backspace':
+                e.preventDefault();
+                this.handleBackspace();
+                break;
+            case ' ':
+                e.preventDefault();
+                this.handleSpace();
+                break;
+            default:
+                // Handle regular letter input
+                if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+                    this.handleLetter(e.key);
+                }
+                break;
         }
     }
     
-    displayCurrentWord(word) {
-        this.currentWord.textContent = word;
-        this.currentWord.style.opacity = '1';
-        this.currentWord.style.transform = 'scale(1)';
+    handleLetter(letter) {
+        this.currentText += letter;
+        this.displayCurrentLetter(letter);
+        this.typedLetters.push(letter);
+        this.playTypingSound();
     }
     
-    clearCurrentWord() {
-        this.currentWord.style.opacity = '0';
-        this.currentWord.style.transform = 'scale(0.8)';
+    handleBackspace() {
+        if (this.currentText.length > 0) {
+            this.currentText = this.currentText.slice(0, -1);
+            this.typedLetters.pop();
+            
+            if (this.currentText.length > 0) {
+                const lastLetter = this.currentText.slice(-1);
+                this.displayCurrentLetter(lastLetter);
+            } else {
+                this.clearCurrentLetter();
+            }
+        }
+    }
+    
+    handleSpace() {
+        if (this.currentText.trim()) {
+            this.currentSentence.push(this.currentText.trim());
+            this.currentText = '';
+            this.clearCurrentLetter();
+        }
+    }
+    
+    displayCurrentLetter(letter) {
+        this.currentLetter.textContent = letter.toUpperCase();
+        this.currentLetter.style.opacity = '1';
+        this.currentLetter.style.transform = 'scale(1)';
+    }
+    
+    clearCurrentLetter() {
+        this.currentLetter.style.opacity = '0';
+        this.currentLetter.style.transform = 'scale(0.8)';
     }
     
     toggleHistory() {
@@ -106,36 +136,38 @@ class CalmTyping {
     updateHistoryDisplay() {
         this.historyList.innerHTML = '';
         
-        if (this.typedWords.length === 0) {
-            this.historyList.innerHTML = '<p style="color: rgba(255,255,255,0.6); font-style: italic;">No words typed yet...</p>';
+        if (this.typedLetters.length === 0) {
+            this.historyList.innerHTML = '<p style="color: rgba(255,255,255,0.6); font-style: italic;">No letters typed yet...</p>';
             return;
         }
         
-        this.typedWords.forEach((word, index) => {
-            const wordElement = document.createElement('div');
-            wordElement.className = 'history-item';
-            wordElement.textContent = `${index + 1}. ${word}`;
-            this.historyList.appendChild(wordElement);
+        // Show recent letters (last 20)
+        const recentLetters = this.typedLetters.slice(-20);
+        recentLetters.forEach((letter, index) => {
+            const letterElement = document.createElement('div');
+            letterElement.className = 'history-item';
+            letterElement.textContent = `${index + 1}. ${letter.toUpperCase()}`;
+            this.historyList.appendChild(letterElement);
         });
     }
     
     handleEnter() {
-        const input = this.typingInput.value.trim();
-        if (input) {
-            // Add words to history
-            const words = input.split(/\s+/);
-            words.forEach(word => {
-                if (word.trim()) {
-                    this.typedWords.push(word.trim());
-                }
-            });
+        if (this.currentSentence.length > 0 || this.currentText.trim()) {
+            // Add current text to sentence if it exists
+            if (this.currentText.trim()) {
+                this.currentSentence.push(this.currentText.trim());
+            }
             
             // Create sentence animation
-            this.animateSentence(input);
+            const fullSentence = this.currentSentence.join(' ');
+            if (fullSentence.trim()) {
+                this.animateSentence(fullSentence);
+            }
             
-            // Clear input
-            this.typingInput.value = '';
-            this.clearCurrentWord();
+            // Clear everything
+            this.currentText = '';
+            this.currentSentence = [];
+            this.clearCurrentLetter();
             
             // Add gentle typing sound effect
             this.playTypingSound();
