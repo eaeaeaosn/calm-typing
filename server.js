@@ -5,9 +5,9 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const sqlite3 = require('sqlite3').verbose();
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const { db, initDatabase } = require('./database');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
@@ -61,46 +61,8 @@ app.use(session({
 }));
 
 // Database initialization
-const db = new sqlite3.Database('./calm-typing.db', (err) => {
-  if (err) {
-    console.error('Error opening database:', err.message);
-  } else {
-    console.log('Connected to SQLite database');
-    initializeTables();
-  }
-});
+initDatabase();
 
-function initializeTables() {
-  // Users table
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    is_guest BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
-  )`);
-
-  // User data table for typing history and settings
-  db.run(`CREATE TABLE IF NOT EXISTS user_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    data_type TEXT NOT NULL, -- 'typing_history', 'settings', 'audio_tracks'
-    data_content TEXT NOT NULL, -- JSON string
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
-  )`);
-
-  // Guest sessions table
-  db.run(`CREATE TABLE IF NOT EXISTS guest_sessions (
-    id TEXT PRIMARY KEY,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
-    data TEXT -- JSON string for guest data
-  )`);
-}
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
