@@ -151,6 +151,34 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Admin endpoint to view users (for development/testing)
+app.get('/api/admin/users', (req, res) => {
+  db.all('SELECT id, username, email, is_guest, created_at, last_login FROM users ORDER BY created_at DESC', (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ 
+      users: rows,
+      total: rows.length,
+      timestamp: new Date().toISOString()
+    });
+  });
+});
+
+// Admin endpoint to view guest sessions
+app.get('/api/admin/guests', (req, res) => {
+  db.all('SELECT id, created_at, last_activity FROM guest_sessions ORDER BY created_at DESC', (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ 
+      guests: rows,
+      total: rows.length,
+      timestamp: new Date().toISOString()
+    });
+  });
+});
+
 // User registration
 app.post('/api/auth/register', async (req, res) => {
   try {
