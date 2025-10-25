@@ -126,6 +126,7 @@ const authenticateGuest = (req, res, next) => {
   
   if (!guestId) {
     return res.status(401).json({ error: 'Guest session ID required' });
+  }
   
   // Verify guest session exists
   db.get('SELECT * FROM guest_sessions WHERE id = ?', [guestId], (err, row) => {
