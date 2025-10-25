@@ -229,7 +229,16 @@ const initDatabase = () => {
                 } else {
                   console.log('Data column added to guest_sessions table');
                 }
-                console.log('PostgreSQL database initialized successfully');
+                
+                // Add unique constraint to user_data if it doesn't exist
+                db.exec('ALTER TABLE user_data ADD CONSTRAINT IF NOT EXISTS user_data_user_id_data_type_key UNIQUE (user_id, data_type)', (err) => {
+                  if (err) {
+                    console.error('Error adding unique constraint to user_data:', err);
+                  } else {
+                    console.log('Unique constraint added to user_data table');
+                  }
+                  console.log('PostgreSQL database initialized successfully');
+                });
               });
             });
           });
