@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Type Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #ffffff;
+            overflow: hidden;
+            font-family: 'Times New Roman', serif;
+            position: relative;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .char {
+            position: absolute;
+            font-size: 80px;
+            color: #000;
+            font-weight: bold;
+            pointer-events: none;
+            animation: fadeFloat 1.2s ease-out forwards;
+        }
+        
+        @keyframes fadeFloat {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.5);
+            }
+        }
+        
+        #controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(240, 240, 240, 0.95);
+            padding: 0;
+            border-radius: 12px;
+            color: #333;
+            z-index: 1000;
+            min-width: 280px;
+            max-width: 280px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        #background-toggle {
+            position: fixed;
+            top: 20px;
+            right: 310px;
+            width: 50px;
+            height: 50px;
+            background: rgba(200, 200, 200, 0.95);
+            border: none;
+            border-radius: 12px;
+            color: #333;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        #background-toggle:hover {
+            background: rgba(180, 180, 180, 0.95);
+            transform: scale(1.05);
+        }
+        
+        #background-toggle.rotating {
+            animation: rotateIcon 0.5s ease;
+        }
+        
+        /* Push background toggle when controls expand */
+        #controls.collapsed ~ #background-toggle {
+            right: 80px;
+        }
+        
+        #volume-control {
+            position: fixed;
+            top: 20px;
+            right: 370px;
+            width: 50px;
+            height: 50px;
+            background: rgba(200, 200, 200, 0.95);
+            border: none;
+            border-radius: 12px;
+            color: #333;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-size: 0;
+        }
+        
+        #volume-control:hover {
+            background: rgba(180, 180, 180, 0.95);
+        }
+        
+        #controls.collapsed ~ #volume-control {
+            right: 140px;
+        }
+        
+        #volume-slider-container {
+            position: fixed;
+            top: 80px;
+            right: 370px;
+            width: 50px;
+            height: 150px;
+            background: rgba(240, 240, 240, 0.95);
+            border-radius: 12px;
+            padding: 15px 10px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        #volume-slider-container.show {
+            display: flex;
+        }
+        
+        #controls.collapsed ~ #volume-slider-container {
+            right: 140px;
+        }
+        
+        #volume-slider-vertical {
+            writing-mode: bt-lr;
+            -webkit-appearance: slider-vertical;
+            width: 8px;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            accent-color: #888;
+            cursor: pointer;
+        }
+        
+        #volume-value {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+        
+        /* SVG icon styles */
+        .icon-svg {
+            width: 24px;
+            height: 24px;
+            fill: #333;
+        }
+        
+        @keyframes rotateIcon {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .svg-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        
+        .svg-background.active {
+            opacity: 1;
+        }
+        
+        .svg-background svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Forest Animation - Organic, chaotic growth */
+        @keyframes floatForest1 {
+            0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            25% { transform: translate(40px, -30px) scale(1.15) rotate(5deg); }
+            50% { transform: translate(-15px, 25px) scale(0.92) rotate(-3deg); }
+            75% { transform: translate(25px, 15px) scale(1.08) rotate(8deg); }
+        }
+        
+        @keyframes floatForest2 {
+            0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            30% { transform: translate(-35px, 40px) scale(1.12) rotate(-7deg); }
+            60% { transform: translate(30px, -20px) scale(0.88) rotate(4deg); }
+            85% { transform: translate(-10px, 30px) scale(1.05) rotate(-2deg); }
+        }
+        
+        @keyframes floatForest3 {
+            0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            20% { transform: translate(20px, 35px) scale(0.93) rotate(6deg); }
+            55% { transform: translate(-40px, -15px) scale(1.1) rotate(-5deg); }
+            80% { transform: translate(15px, -25px) scale(1.03) rotate(3deg); }
+        }
+        
+        /* Ocean Animation - Fluid, wave-like motion */
+        @keyframes waveOcean1 {
+            0%, 100% { transform: translateY(0) scaleX(1) scaleY(1); }
+            33% { transform: translateY(-35px) scaleX(1.12) scaleY(0.95); }
+            66% { transform: translateY(25px) scaleX(0.92) scaleY(1.08); }
+        }
+        
+        @keyframes waveOcean2 {
+            0%, 100% { transform: translateY(0) scaleX(1) scaleY(1) rotate(0deg); }
+            25% { transform: translateY(40px) scaleX(0.88) scaleY(1.1) rotate(-3deg); }
+            50% { transform: translateY(-20px) scaleX(1.15) scaleY(0.92) rotate(2deg); }
+            75% { transform: translateY(15px) scaleX(0.95) scaleY(1.05) rotate(-1deg); }
+        }
+        
+        @keyframes waveOcean3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            40% { transform: translate(-25px, -30px) scale(1.08); }
+            80% { transform: translate(20px, 35px) scale(0.94); }
+        }
+        
+        /* Mountain Animation - Crystalline, geometric drift */
+        @keyframes driftMountain1 {
+            0%, 100% { transform: translate(0, 0) rotate(0deg) skewX(0deg); }
+            35% { transform: translate(25px, -20px) rotate(3deg) skewX(2deg); }
+            70% { transform: translate(-18px, 28px) rotate(-2deg) skewX(-3deg); }
+        }
+        
+        @keyframes driftMountain2 {
+            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            25% { transform: translate(-30px, 25px) rotate(-4deg) scale(1.06); }
+            50% { transform: translate(20px, -15px) rotate(2deg) scale(0.96); }
+            75% { transform: translate(15px, 30px) rotate(-1deg) scale(1.02); }
+        }
+        
+        @keyframes driftMountain3 {
+            0%, 100% { transform: translate(0, 0) rotate(0deg) skewY(0deg); }
+            30% { transform: translate(35px, 18px) rotate(2deg) skewY(3deg); }
+            65% { transform: translate(-22px, -25px) rotate(-3deg) skewY(-2deg); }
+        }
+        
+        #controls.collapsed {
+            width: 50px;
+            min-width: 50px;
+        }
+        
+        #toggle-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(200, 200, 200, 0.9);
+            border: none;
+            color: #333;
+            font-size: 20px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        #toggle-btn:hover {
+            background: rgba(180, 180, 180, 0.9);
+        }
+        
+        #controls-content {
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        
+        #controls.collapsed #controls-content {
+            max-height: 0;
+            padding: 0 20px;
+            opacity: 0;
+        }
+        
+        #controls h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        #font-select {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        #font-select:hover {
+            border-color: #bbb;
+            background: #fafafa;
+        }
+        
+        #font-select option {
+            background: #fff;
+            color: #333;
+            padding: 8px;
+        }
+        
+        .divider {
+            border-top: 1px solid #ddd;
+            margin: 15px 0;
+        }
+        
+        .section-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+        
+        #color-picker, #size-slider {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        #color-picker {
+            height: 40px;
+        }
+        
+        #size-slider {
+            accent-color: #888;
+        }
+        
+        .slider-value {
+            display: inline-block;
+            background: #333;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        
+        #font-upload {
+            display: block;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            color: #333;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        #font-upload:hover {
+            background: #fafafa;
+            border-color: #bbb;
+        }
+        
+        #font-upload::-webkit-file-upload-button {
+            background: #333;
+            border: none;
+            padding: 6px 14px;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        #font-upload::-webkit-file-upload-button:hover {
+            background: #555;
+        }
+        
+        .info {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+        }
+        
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(240, 240, 240, 0.9);
+            padding: 15px 30px;
+            border-radius: 8px;
+            color: #333;
+            font-size: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        #history-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            pointer-events: auto;
+        }
+        
+        #history-modal.show {
+            display: flex;
+        }
+        
+        #history-content {
+            background: rgba(240, 240, 240, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 70vh;
+            overflow-y: auto;
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            pointer-events: auto;
+        }
+        
+        #history-content h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            color: #333;
+        }
+        
+        #history-list {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            border-radius: 8px;
+            font-family: 'Times New Roman', serif;
+            font-size: 18px;
+            line-height: 1.8;
+            text-align: justify;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            display: inline;
+        }
+        
+        .history-item::after {
+            content: ' ';
+        }
+        
+        .history-empty {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+        
+        .history-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .history-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .history-btn.close {
+            background: #333;
+            color: #fff;
+        }
+        
+        .history-btn.close:hover {
+            background: #555;
+            transform: translateY(-1px);
+        }
+        
+        .history-btn.clear {
+            background: #dc3545;
+            color: #fff;
+        }
+        
+        .history-btn.clear:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+        
+        .history-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Forest Background -->
+    <div id="forest-bg" class="svg-background">
+        <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="forestGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#a8e6cf;stop-opacity:0.7" />
+                    <stop offset="50%" style="stop-color:#dcedc8;stop-opacity:0.5" />
+                    <stop offset="100%" style="stop-color:#c8e6c9;stop-opacity:0.8" />
+                </linearGradient>
+                <linearGradient id="forestGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#aed581;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#b2dfdb;stop-opacity:0.7" />
+                </linearGradient>
+                <radialGradient id="forestGrad3">
+                    <stop offset="0%" style="stop-color:#c5e1a5;stop-opacity:0.8" />
+                    <stop offset="100%" style="stop-color:#a5d6a7;stop-opacity:0.4" />
+                </radialGradient>
+                <radialGradient id="forestGrad4">
+                    <stop offset="0%" style="stop-color:#f1f8e9;stop-opacity:0.9" />
+                    <stop offset="100%" style="stop-color:#dcedc8;stop-opacity:0.3" />
+                </radialGradient>
+            </defs>
+            <!-- Organic blob shapes -->
+            <path d="M 150 250 Q 200 100 350 180 T 420 320 Q 380 450 250 400 T 150 250 Z" 
+                  fill="url(#forestGrad1)" 
+                  style="animation: floatForest1 12s ease-in-out infinite;">
+                <animateTransform attributeName="transform" type="rotate" 
+                    from="0 250 300" to="15 250 300" dur="20s" repeatCount="indefinite"/>
+            </path>
+            
+            <ellipse cx="700" cy="200" rx="180" ry="250" 
+                     fill="url(#forestGrad2)" 
+                     style="animation: floatForest2 15s ease-in-out infinite;" 
+                     transform="rotate(-25 700 200)"/>
+            
+            <path d="M 850 400 C 900 350 1000 380 1050 450 S 1000 600 920 580 Q 850 550 820 500 T 850 400 Z" 
+                  fill="url(#forestGrad3)" 
+                  style="animation: floatForest3 10s ease-in-out infinite;">
+                <animateTransform attributeName="transform" type="rotate" 
+                    from="0 900 500" to="-20 900 500" dur="25s" repeatCount="indefinite"/>
+            </path>
+            
+            <circle cx="300" cy="650" r="120" fill="url(#forestGrad4)" 
+                    style="animation: floatForest1 18s ease-in-out infinite reverse;"/>
+            
+            <path d="M 500 500 Q 600 450 650 550 T 700 700 Q 600 750 520 680 T 500 500 Z" 
+                  fill="url(#forestGrad1)" 
+                  opacity="0.6"
+                  style="animation: floatForest2 14s ease-in-out infinite;"/>
+            
+            <ellipse cx="100" cy="100" rx="100" ry="150" 
+                     fill="url(#forestGrad3)" 
+                     style="animation: floatForest3 16s ease-in-out infinite;" 
+                     transform="rotate(45 100 100)"/>
+        </svg>
+    </div>
+    
+    <!-- Ocean Background -->
+    <div id="ocean-bg" class="svg-background">
+        <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <linearGradient id="oceanGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#e1f5fe;stop-opacity:0.8" />
+                    <stop offset="50%" style="stop-color:#b3e5fc;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#81d4fa;stop-opacity:0.7" />
+                </linearGradient>
+                <linearGradient id="oceanGrad2" x1="30%" y1="0%" x2="70%" y2="100%">
+                    <stop offset="0%" style="stop-color:#b2ebf2;stop-opacity:0.7" />
+                    <stop offset="50%" style="stop-color:#80deea;stop-opacity:0.5" />
+                    <stop offset="100%" style="stop-color:#4dd0e1;stop-opacity:0.8" />
+                </linearGradient>
+                <radialGradient id="oceanGrad3" cx="50%" cy="50%">
+                    <stop offset="0%" style="stop-color:#e0f7fa;stop-opacity:0.9" />
+                    <stop offset="50%" style="stop-color:#b3e5fc;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#64b5f6;stop-opacity:0.3" />
+                </radialGradient>
+                <radialGradient id="oceanGrad4" cx="50%" cy="50%">
+                    <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.7" />
+                    <stop offset="30%" style="stop-color:#e1f5fe;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#81d4fa;stop-opacity:0.4" />
+                </radialGradient>
+                <radialGradient id="oceanGrad5" cx="50%" cy="50%">
+                    <stop offset="0%" style="stop-color:#f1f8fb;stop-opacity:0.8" />
+                    <stop offset="60%" style="stop-color:#b3e5fc;stop-opacity:0.5" />
+                    <stop offset="100%" style="stop-color:#4fc3f7;stop-opacity:0.3" />
+                </radialGradient>
+                <linearGradient id="oceanGrad6" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#b3e5fc;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#e1f5fe;stop-opacity:0.7" />
+                </linearGradient>
+            </defs>
+            
+            <!-- Full background base layer -->
+            <rect width="1200" height="800" fill="url(#oceanGrad6)" opacity="0.4"/>
+            
+            <!-- Top area coverage -->
+            <ellipse cx="200" cy="100" rx="250" ry="200" 
+                     fill="url(#oceanGrad4)" 
+                     opacity="0.6"
+                     style="animation: waveOcean3 11s ease-in-out infinite;"/>
+            
+            <ellipse cx="600" cy="50" rx="300" ry="180" 
+                     fill="url(#oceanGrad5)" 
+                     opacity="0.5"
+                     style="animation: waveOcean1 13s ease-in-out infinite;">
+                <animateTransform attributeName="transform" type="rotate" 
+                    from="0 600 50" to="8 600 50" dur="16s" repeatCount="indefinite"/>
+            </ellipse>
+            
+            <ellipse cx="1000" cy="120" rx="280" ry="220" 
+                     fill="url(#oceanGrad3)" 
+                     opacity="0.6"
+                     style="animation: waveOcean2 12s ease-in-out infinite;"/>
+            
+            <!-- Large central round shapes -->
+            <circle cx="600" cy="400" r="250" 
+                    fill="url(#oceanGrad3)" 
+                    style="animation: waveOcean3 10s ease-in-out infinite;">
+                <animateTransform attributeName="transform" type="scale" 
+                    values="1;1.1;0.95;1" dur="10s" repeatCount="indefinite"
+                    additive="sum"/>
+            </circle>
+            
+            <ellipse cx="300" cy="350" rx="200" ry="240" 
+                     fill="url(#oceanGrad4)" 
+                     style="animation: waveOcean1 12s ease-in-out infinite reverse;">
+                <animateTransform attributeName="transform" type="rotate" 
+                    from="0 300 350" to="10 300 350" dur="15s" repeatCount="indefinite"/>
+            </ellipse>
+            
+            <ellipse cx="950" cy="400" rx="220" ry="190" 
+                     fill="url(#oceanGrad5)" 
+                     style="animation: waveOcean2 13s ease-in-out infinite;">
+                <animateTransform attributeName="transform" type="rotate" 
+                    from="0 950 400" to="-8 950 400" dur="14s" repeatCount="indefinite"/>
+            </ellipse>
+            
+            <!-- Additional middle area shapes -->
+            <circle cx="150" cy="400" r="120" 
+                    fill="url(#oceanGrad3)" 
+                    opacity="0.7"
+                    style="animation: waveOcean3 9s ease-in-out infinite;"/>
+            
+            <circle cx="1050" cy="300" r="140" 
+                    fill="url(#oceanGrad4)" 
+                    opacity="0.65"
+                    style="animation: waveOcean1 14s ease-in-out infinite reverse;"/>
+            
+            <ellipse cx="450" cy="200" rx="160" ry="130" 
+                     fill="url(#oceanGrad5)" 
+                     opacity="0.6"
+                     style="animation: waveOcean2 10s ease-in-out infinite;"/>
+            
+            <ellipse cx="800" cy="250" rx="140" ry="170" 
+                     fill="url(#oceanGrad1)" 
+                     opacity="0.6"
+                     style="animation: waveOcean3 11s ease-in-out infinite;"/>
+            
+            <!-- Bottom wave layers - full coverage -->
+            <path d="M 0 600 Q 150 550 300 590 T 600 570 Q 900 550 1200 590 L 1200 800 L 0 800 Z" 
+                  fill="url(#oceanGrad2)" 
+                  opacity="0.7"
+                  style="animation: waveOcean2 10s ease-in-out infinite;"/>
+            
+            <path d="M 0 500 Q 200 450 400 480 T 800 460 Q 1000 470 1200 450 L 1200 800 L 0 800 Z" 
+                  fill="url(#oceanGrad1)" 
+                  opacity="0.6"
+                  style="animation: waveOcean1 9s ease-in-out infinite;"/>
+            
+            <!-- Flowing organic shapes for coverage -->
+            <path d="M 100 650 Q 200 600 300 640 Q 350 680 300 730 Q 250 770 150 750 Q 50 720 100 650 Z" 
+                  fill="url(#oceanGrad2)" 
+                  opacity="0.5"
+                  style="animation: waveOcean2 10s ease-in-out infinite;"/>
+            
+            <path d="M 950 550 Q 1050 510 1120 570 Q 1150 630 1100 690 Q 1030 730 970 680 Q 920 620 950 550 Z" 
+                  fill="url(#oceanGrad1)" 
+                  opacity="0.6"
+                  style="animation: waveOcean3 11s ease-in-out infinite;"/>
+            
+            <!-- Top flowing accent waves -->
+            <path d="M 0 200 Q 300 170 600 190 T 1200 180" 
+                  stroke="url(#oceanGrad4)" 
+                  stroke-width="80" 
+                  fill="none" 
+                  opacity="0.4"
+                  style="animation: waveOcean1 15s ease-in-out infinite;"/>
+            
+            <path d="M 0 300 Q 250 270 500 290 T 1000 280 Q 1100 285 1200 290" 
+                  stroke="url(#oceanGrad5)" 
+                  stroke-width="70" 
+                  fill="none" 
+                  opacity="0.35"
+                  style="animation: waveOcean2 13s ease-in-out infinite;"/>
+            
+            <!-- Corner coverage shapes -->
+            <ellipse cx="50" cy="50" rx="120" ry="100" 
+                     fill="url(#oceanGrad3)" 
+                     opacity="0.5"
+                     style="animation: waveOcean3 10s ease-in-out infinite;"/>
+            
+            <ellipse cx="1150" cy="750" rx="150" ry="120" 
+                     fill="url(#oceanGrad4)" 
+                     opacity="0.6"
+                     style="animation: waveOcean1 11s ease-in-out infinite;"/>
+        </svg>
+    </div>
+    
+    <!-- Mountain Background -->
+    <div id="mountain-bg" class="svg-background">
+        <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="mountainGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#f3e5f5;stop-opacity:0.8" />
+                    <stop offset="50%" style="stop-color:#e1bee7;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#ce93d8;stop-opacity:0.7" />
+                </linearGradient>
+                <linearGradient id="mountainGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#f8bbd0;stop-opacity:0.7" />
+                    <stop offset="100%" style="stop-color:#d1c4e9;stop-opacity:0.6" />
+                </linearGradient>
+                <radialGradient id="mountainGrad3">
+                    <stop offset="0%" style="stop-color:#fce4ec;stop-opacity:0.9" />
+                    <stop offset="100%" style="stop-color:#b39ddb;stop-opacity:0.4" />
+                </radialGradient>
+                <linearGradient id="mountainGrad4" x1="50%" y1="0%" x2="50%" y2="100%">
+                    <stop offset="0%" style="stop-color:#ede7f6;stop-opacity:0.8" />
+                    <stop offset="100%" style="stop-color:#ba68c8;stop-opacity:0.5" />
+                </linearGradient>
+            </defs>
+            <!-- Angular, crystalline forms -->
+            <path d="M 50 700 L 180 400 L 280 550 L 420 300 L 520 700 Z" 
+                  fill="url(#mountainGrad1)" 
+                  style="animation: driftMountain1 14s ease-in-out infinite;">
+                <animateTransform attributeName="transform" type="skewX" 
+                    from="0" to="5" dur="18s" repeatCount="indefinite"/>
+            </path>
+            
+            <path d="M 350 700 L 500 250 L 620 450 L 750 180 L 880 700 Z" 
+                  fill="url(#mountainGrad2)" 
+                  style="animation: driftMountain2 16s ease-in-out infinite;"/>
+            
+            <polygon points="700,700 850,350 950,500 1100,280 1200,700" 
+                     fill="url(#mountainGrad3)" 
+                     style="animation: driftMountain3 13s ease-in-out infinite;"/>
+            
+            <path d="M 200 300 L 350 100 L 450 250 L 550 50 L 600 300 Q 500 350 400 320 T 200 300 Z" 
+                  fill="url(#mountainGrad4)" 
+                  opacity="0.7"
+                  style="animation: driftMountain1 20s ease-in-out infinite reverse;"/>
+            
+            <ellipse cx="900" cy="550" rx="120" ry="180" 
+                     fill="url(#mountainGrad1)" 
+                     style="animation: driftMountain2 11s ease-in-out infinite;" 
+                     transform="rotate(30 900 550)"/>
+            
+            <path d="M 100 500 Q 200 450 280 520 L 350 400 Q 400 480 420 550 T 350 650 Q 250 680 180 620 T 100 500 Z" 
+                  fill="url(#mountainGrad3)" 
+                  opacity="0.6"
+                  style="animation: driftMountain3 17s ease-in-out infinite;"/>
+            
+            <polygon points="600,600 720,420 800,550 900,380 1000,600" 
+                     fill="url(#mountainGrad2)" 
+                     opacity="0.5"
+                     style="animation: driftMountain1 15s ease-in-out infinite;"/>
+        </svg>
+    </div>
+    
+    <div id="canvas-container"></div>
+    
+    <button id="background-toggle" title="Change Background">
+        <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+    </button>
+    
+    <button id="volume-control" title="Volume Control">
+        <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" fill="currentColor"/>
+        </svg>
+    </button>
+    
+    <div id="volume-slider-container">
+        <input type="range" id="volume-slider-vertical" min="0" max="100" value="50" orient="vertical">
+        <span id="volume-value">50%</span>
+    </div>
+    
+    <div id="controls" class="collapsed">
+        <button id="toggle-btn">☰</button>
+        <div id="controls-content">
+            <h3>Font Controls</h3>
+            
+            <div class="section-label">Select Font:</div>
+            <select id="font-select">
+                <option value="Courier New, monospace">Courier New</option>
+                <option value="Times New Roman, serif">Times New Roman</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+                <option value="Impact, sans-serif">Impact</option>
+                <option value="Comic Sans MS, cursive">Comic Sans MS</option>
+            </select>
+            
+            <div class="divider"></div>
+            
+            <div class="section-label">Font Size: <span class="slider-value" id="size-value">80px</span></div>
+            <input type="range" id="size-slider" min="40" max="200" value="80" step="10">
+            
+            <div class="divider"></div>
+            
+            <div class="section-label">Text Color:</div>
+            <input type="color" id="color-picker" value="#000000">
+            
+            <div class="divider"></div>
+            
+            <div class="section-label">Or Upload Custom Font:</div>
+            <input type="file" id="font-upload" accept=".ttf,.otf" />
+            <div class="info">Upload .ttf or .otf file</div>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        Start typing anywhere...
+    </div>
+    
+    <div id="history-modal">
+        <div id="history-content">
+            <h2>Typing History</h2>
+            <div id="history-list"></div>
+            <div class="history-buttons">
+                <button class="history-btn close" id="close-history">Close</button>
+                <button class="history-btn clear" id="clear-history">Clear History</button>
+            </div>
+            <div class="history-hint">Press Tab to toggle history</div>
+        </div>
+    </div>
+    
+    <script>
+        // DeepSeek API Configuration
+        const DEEPSEEK_CONFIG = {
+            apiKey: 'sk-ac8a74958695407982c793531636cb29', // Your DeepSeek API key
+            apiUrl: 'https://api.deepseek.com/v1/chat/completions',
+            model: 'deepseek-chat',
+            maxTokens: 50,
+            temperature: 0.7
+        };
+        
+        const container = document.getElementById('canvas-container');
+        const fontUpload = document.getElementById('font-upload');
+        const fontSelect = document.getElementById('font-select');
+        const colorPicker = document.getElementById('color-picker');
+        const sizeSlider = document.getElementById('size-slider');
+        const sizeValue = document.getElementById('size-value');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const controls = document.getElementById('controls');
+        const historyModal = document.getElementById('history-modal');
+        const historyList = document.getElementById('history-list');
+        const closeHistoryBtn = document.getElementById('close-history');
+        const clearHistoryBtn = document.getElementById('clear-history');
+        const backgroundToggle = document.getElementById('background-toggle');
+        const forestBg = document.getElementById('forest-bg');
+        const oceanBg = document.getElementById('ocean-bg');
+        const mountainBg = document.getElementById('mountain-bg');
+        const volumeControl = document.getElementById('volume-control');
+        const volumeSliderContainer = document.getElementById('volume-slider-container');
+        const volumeSlider = document.getElementById('volume-slider-vertical');
+        const volumeValue = document.getElementById('volume-value');
+        
+        let customFontFamily = 'Courier New, monospace';
+        let textColor = '#000000';
+        let fontSize = 80;
+        let charPosition = 0;
+        let activeChars = 0;
+        let resetTimeout;
+        let currentLineChars = [];
+        let totalLineWidth = 0;
+        let currentWord = '';
+        let typingHistory = [];
+        let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
+        let currentVolume = 0.5;
+        
+        const backgrounds = [
+            { element: null, icon: createRectIcon(), name: 'none' },
+            { element: forestBg, icon: createTreeIcon(), name: 'forest' },
+            { element: oceanBg, icon: createWaveIcon(), name: 'ocean' },
+            { element: mountainBg, icon: createMountainIcon(), name: 'mountain' }
+        ];
+        
+        // Create SVG icons
+        function createRectIcon() {
+            return '<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+        }
+        
+        function createTreeIcon() {
+            return '<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L8 8h2v2L6 16h3v6h6v-6h3l-4-6v-2h2L12 2z" fill="currentColor"/></svg>';
+        }
+        
+        function createWaveIcon() {
+            return '<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 12c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3M3 18c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+        }
+        
+        function createMountainIcon() {
+            return '<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 6l-3 4.5L8 6 2 19h20L14 6z" fill="currentColor"/></svg>';
+        }
+        
+        // Load history from localStorage
+        function loadHistory() {
+            const saved = localStorage.getItem('typingHistory');
+            if (saved) {
+                try {
+                    typingHistory = JSON.parse(saved);
+                } catch (e) {
+                    typingHistory = [];
+                }
+            }
+        }
+        
+        // Save history to localStorage
+        function saveHistory() {
+            localStorage.setItem('typingHistory', JSON.stringify(typingHistory));
+        }
+        
+        // Add word to history with auto-correction
+        async function addToHistory(word) {
+            if (word.trim().length > 0) {
+                try {
+                    // Auto-correct the word before saving
+                    const correctedWord = await autoCorrectWord(word.trim());
+                    typingHistory.push({
+                        text: correctedWord,
+                        original: word !== correctedWord ? word : null,
+                        timestamp: new Date().toISOString()
+                    });
+                    saveHistory();
+                    console.log(`Saved to history: ${word} → ${correctedWord}`);
+                } catch (error) {
+                    // If auto-correction fails, save original word
+                    typingHistory.push({
+                        text: word,
+                        timestamp: new Date().toISOString()
+                    });
+                    saveHistory();
+                    console.log(`Saved original word to history: ${word}`);
+                }
+            }
+        }
+        
+        // Render history list
+        function renderHistory() {
+            if (typingHistory.length === 0) {
+                historyList.innerHTML = '<div class="history-empty" style="color: #999; font-style: italic; padding: 40px 20px; text-align: center;">No words typed yet. Start typing to build your history!</div>';
+            } else {
+                // Join all words into a continuous paragraph, showing corrections
+                const paragraph = typingHistory
+                    .map(item => {
+                        if (item.original && item.original !== item.text) {
+                            // Show both original and corrected
+                            return `<span style="color: #ff6b6b; text-decoration: line-through;">${item.original}</span> <span style="color: #51cf66;">${item.text}</span>`;
+                        } else {
+                            return item.text;
+                        }
+                    })
+                    .join(' ');
+                historyList.innerHTML = paragraph;
+            }
+        }
+        
+        // Toggle history modal
+        function toggleHistory() {
+            historyModal.classList.toggle('show');
+            if (historyModal.classList.contains('show')) {
+                renderHistory();
+            }
+        }
+        
+        // Close history modal
+        closeHistoryBtn.addEventListener('click', function() {
+            historyModal.classList.remove('show');
+        });
+        
+        // Clear history
+        clearHistoryBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all typing history?')) {
+                typingHistory = [];
+                localStorage.removeItem('typingHistory');
+                saveHistory();
+                renderHistory();
+            }
+        });
+        
+        // Close modal when clicking outside
+        historyModal.addEventListener('click', function(e) {
+            if (e.target === historyModal) {
+                historyModal.classList.remove('show');
+            }
+        });
+        
+        // Load history on startup
+        loadHistory();
+        
+        // DeepSeek API functions
+        async function autoCorrectWord(word) {
+            console.log('Auto-correcting word:', word);
+            
+            // Check if API key is set
+            if (DEEPSEEK_CONFIG.apiKey === 'YOUR_DEEPSEEK_API_KEY' || !DEEPSEEK_CONFIG.apiKey) {
+                console.log('DeepSeek API key not configured, using local correction');
+                return getLocalCorrection(word);
+            }
+            
+            try {
+                console.log('Calling DeepSeek API for correction...');
+                const correctedWord = await callDeepSeekCorrection(word);
+                console.log('DeepSeek correction:', correctedWord);
+                return correctedWord;
+            } catch (error) {
+                console.log('DeepSeek API error:', error);
+                console.log('Falling back to local correction');
+                return getLocalCorrection(word);
+            }
+        }
+        
+        async function callDeepSeekCorrection(word) {
+            const response = await fetch(DEEPSEEK_CONFIG.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${DEEPSEEK_CONFIG.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: DEEPSEEK_CONFIG.model,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: `Analyze this word: "${word}". 
+                            1. If it's a curse word, profanity, or inappropriate language, replace it with a cute kaomoji (like (╯°□°）╯︵ ┻━┻ or (╯︵╰,) or ٩(◕‿◕)۶)
+                            2. If it's a misspelled normal word, correct it to proper English
+                            3. If it's already correct, return it unchanged
+                            Return only the result, nothing else.`
+                        }
+                    ],
+                    max_tokens: 30,
+                    temperature: 0.3
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const correctedWord = data.choices[0].message.content.trim();
+            
+            return correctedWord || word; // Return original if correction fails
+        }
+        
+        function getKaomojiForCurseWord(word) {
+            // Curse word detection and kaomoji replacement
+            const curseWords = {
+                'shit': '(╯°□°）╯︵ ┻━┻',
+                'fuck': '(╯︵╰,)',
+                'damn': '٩(◕‿◕)۶',
+                'hell': '(╯°□°）╯︵ ┻━┻',
+                'bitch': '(╯︵╰,)',
+                'ass': '(╯°□°）╯︵ ┻━┻',
+                'crap': '(╯︵╰,)',
+                'piss': '٩(◕‿◕)۶',
+                'dick': '(╯°□°）╯︵ ┻━┻',
+                'cock': '(╯︵╰,)',
+                'pussy': '٩(◕‿◕)۶',
+                'fag': '(╯°□°）╯︵ ┻━┻',
+                'gay': '(╯︵╰,)',
+                'retard': '٩(◕‿◕)۶',
+                'stupid': '(╯°□°）╯︵ ┻━┻',
+                'idiot': '(╯︵╰,)',
+                'moron': '٩(◕‿◕)۶',
+                'bastard': '(╯°□°）╯︵ ┻━┻',
+                'whore': '(╯︵╰,)',
+                'slut': '٩(◕‿◕)۶',
+                'bitch': '(╯°□°）╯︵ ┻━┻',
+                'fucking': '(╯︵╰,)',
+                'shitty': '٩(◕‿◕)۶',
+                'damned': '(╯°□°）╯︵ ┻━┻',
+                'hellish': '(╯︵╰,)',
+                'cursed': '٩(◕‿◕)۶',
+                'fucked': '(╯°□°）╯︵ ┻━┻',
+                'shitted': '(╯︵╰,)',
+                'damning': '٩(◕‿◕)۶'
+            };
+            
+            const lowerWord = word.toLowerCase();
+            return curseWords[lowerWord] || null;
+        }
+        
+        function getLocalCorrection(word) {
+            // First check for curse words
+            const kaomoji = getKaomojiForCurseWord(word);
+            if (kaomoji) {
+                console.log('Local curse word detected, converting to kaomoji:', word, '->', kaomoji);
+                return kaomoji;
+            }
+            
+            // Check if word is already correct (common words)
+            const commonWords = [
+                'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'men', 'put', 'say', 'she', 'too', 'use', 'want', 'been', 'call', 'come', 'does', 'each', 'find', 'give', 'good', 'have', 'here', 'just', 'know', 'like', 'long', 'look', 'make', 'many', 'more', 'most', 'much', 'name', 'need', 'only', 'over', 'part', 'place', 'right', 'said', 'same', 'seem', 'should', 'small', 'still', 'such', 'take', 'than', 'them', 'there', 'these', 'they', 'this', 'time', 'very', 'well', 'were', 'what', 'when', 'where', 'which', 'while', 'will', 'with', 'work', 'would', 'write', 'your', 'about', 'after', 'again', 'before', 'below', 'between', 'during', 'except', 'inside', 'outside', 'through', 'under', 'within', 'without'
+            ];
+            
+            if (commonWords.includes(word.toLowerCase())) {
+                console.log('Word is already correct:', word);
+                return word;
+            }
+            
+            // Simple local correction using common misspellings
+            const corrections = {
+                // Common misspellings
+                'teh': 'the',
+                'adn': 'and',
+                'taht': 'that',
+                'recieve': 'receive',
+                'seperate': 'separate',
+                'occured': 'occurred',
+                'definately': 'definitely',
+                'accomodate': 'accommodate',
+                'begining': 'beginning',
+                'beleive': 'believe',
+                'calender': 'calendar',
+                'cemetary': 'cemetery',
+                'concious': 'conscious',
+                'existance': 'existence',
+                'goverment': 'government',
+                'independant': 'independent',
+                'occassion': 'occasion',
+                'priviledge': 'privilege',
+                'rythm': 'rhythm',
+                'thier': 'their',
+                'untill': 'until',
+                'wich': 'which',
+                'writting': 'writing',
+                'youself': 'yourself',
+                'acheive': 'achieve',
+                'becuase': 'because',
+                'comming': 'coming',
+                'differnt': 'different',
+                'enviroment': 'environment',
+                'finnally': 'finally',
+                'frend': 'friend',
+                'grate': 'great',
+                'happend': 'happened',
+                'immediatly': 'immediately',
+                'knowlege': 'knowledge',
+                'lenght': 'length',
+                'mispell': 'misspell',
+                'neccessary': 'necessary',
+                'occured': 'occurred',
+                'publically': 'publicly',
+                'recieve': 'receive',
+                'seperate': 'separate',
+                'succesful': 'successful',
+                'thier': 'their',
+                'untill': 'until',
+                'wich': 'which',
+                'writting': 'writing'
+            };
+            
+            const corrected = corrections[word.toLowerCase()] || word;
+            console.log('Local correction:', word, '->', corrected);
+            return corrected;
+        }
+        
+        // Cycle through backgrounds
+        function cycleBackground() {
+            // Remove active class from current background
+            if (backgrounds[currentBackground].element) {
+                backgrounds[currentBackground].element.classList.remove('active');
+            }
+            
+            // Move to next background
+            currentBackground = (currentBackground + 1) % backgrounds.length;
+            
+            // Add active class to new background
+            if (backgrounds[currentBackground].element) {
+                backgrounds[currentBackground].element.classList.add('active');
+            }
+            
+            // Update button icon
+            backgroundToggle.innerHTML = backgrounds[currentBackground].icon;
+        }
+        
+        // Toggle background on click
+        backgroundToggle.addEventListener('click', function() {
+            // Add rotation animation
+            backgroundToggle.classList.add('rotating');
+            setTimeout(() => {
+                backgroundToggle.classList.remove('rotating');
+            }, 500);
+            
+            cycleBackground();
+        });
+        
+        // Volume control toggle
+        volumeControl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            volumeSliderContainer.classList.toggle('show');
+        });
+        
+        // Close volume slider when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!volumeControl.contains(e.target) && !volumeSliderContainer.contains(e.target)) {
+                volumeSliderContainer.classList.remove('show');
+            }
+        });
+        
+        // Handle volume change
+        volumeSlider.addEventListener('input', function() {
+            currentVolume = this.value / 100;
+            volumeValue.textContent = this.value + '%';
+        });
+        
+        // Toggle controls panel
+        toggleBtn.addEventListener('click', function() {
+            controls.classList.toggle('collapsed');
+            toggleBtn.textContent = controls.classList.contains('collapsed') ? '☰' : '✕';
+        });
+        
+        // Handle color change
+        colorPicker.addEventListener('input', function() {
+            textColor = this.value;
+        });
+        
+        // Handle size change
+        sizeSlider.addEventListener('input', function() {
+            fontSize = parseInt(this.value);
+            sizeValue.textContent = fontSize + 'px';
+        });
+        
+        // Handle font selection
+        fontSelect.addEventListener('change', function() {
+            customFontFamily = this.value;
+        });
+        
+        // Handle font upload
+        fontUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const fontName = 'CustomFont_' + Date.now();
+                    const fontFace = new FontFace(fontName, event.target.result);
+                    
+                    fontFace.load().then(function(loadedFace) {
+                        document.fonts.add(loadedFace);
+                        customFontFamily = fontName;
+                        
+                        // Update select to show custom font is active
+                        fontSelect.value = '';
+                        console.log('Font loaded:', fontName);
+                    }).catch(function(error) {
+                        console.error('Font loading failed:', error);
+                        alert('Failed to load font. Please try another file.');
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+        
+        // Helper function to convert hex to rgba
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        
+        // Handle typing
+        document.addEventListener('keypress', function(e) {
+            if (e.target.tagName === 'INPUT') return;
+            
+            const char = e.key;
+            if (char.length !== 1) return;
+            
+            // Reset on space and save current word with auto-correction
+            if (char === ' ') {
+                if (currentWord.length > 0) {
+                    // Auto-correct and save to history
+                    addToHistory(currentWord.trim());
+                    currentWord = '';
+                }
+                charPosition = 0;
+                return;
+            }
+            
+            // Add character to current word
+            currentWord += char;
+            
+            clearTimeout(resetTimeout);
+            createFloatingText(char, charPosition);
+            charPosition++;
+            
+            // Auto-reset after 1 second of no typing with auto-correction
+            resetTimeout = setTimeout(async () => {
+                if (currentWord.length > 0) {
+                    // Auto-correct and save to history
+                    await addToHistory(currentWord.trim());
+                    currentWord = '';
+                }
+                charPosition = 0;
+            }, 1000); // Increased to 1 second for better auto-correction
+        });
+        
+        // Reset position on Enter and save word
+        document.addEventListener('keydown', function(e) {
+            // Tab to toggle history
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                toggleHistory();
+                return;
+            }
+            
+            if (e.key === 'Enter') {
+                if (currentWord.length > 0) {
+                    // Auto-correct and save to history
+                    addToHistory(currentWord.trim());
+                    currentWord = '';
+                }
+                charPosition = 0;
+            }
+        });
+        
+        function createFloatingText(text, position) {
+            const charElement = document.createElement('div');
+            charElement.className = 'char';
+            charElement.textContent = text;
+            charElement.style.fontFamily = customFontFamily;
+            charElement.style.fontSize = fontSize + 'px';
+            
+            // Position characters in a line with spacing
+            const charWidth = 90; // spacing between characters
+            const startX = -((charPosition + 1) * charWidth / 2); // center the line
+            const offsetX = startX + (position * charWidth);
+            charElement.style.left = `calc(50% + ${offsetX}px)`;
+            charElement.style.top = '50%';
+            
+            // Apply color and matching glow effect
+            charElement.style.color = textColor;
+            charElement.style.textShadow = `0 0 20px ${hexToRgba(textColor, 0.5)}`;
+            
+            container.appendChild(charElement);
+            activeChars++;
+            
+            // Remove after animation
+            setTimeout(() => {
+                charElement.remove();
+                activeChars--;
+                
+                // Reset position when all chars are cleared
+                if (activeChars === 0) {
+                    charPosition = 0;
+                }
+            }, 1200);
+        }
+        
+        // Hide instructions after first keypress
+        let firstKey = true;
+        document.addEventListener('keypress', function() {
+            if (firstKey) {
+                document.getElementById('instructions').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('instructions').style.display = 'none';
+                }, 500);
+                firstKey = false;
+            }
+        });
+    </script>
+</body>
+</html>
