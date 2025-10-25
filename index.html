@@ -1300,7 +1300,7 @@
                 updateAuthUI();
             } else {
                 // No authentication - redirect to auth page
-                window.location.href = '/auth';
+                window.location.href = '/auth.html';
                 return;
             }
             
@@ -1392,11 +1392,11 @@
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
             localStorage.removeItem('guestId');
-            window.location.href = '/auth';
+            window.location.href = '/auth.html';
         }
         
         function switchToAuth() {
-            window.location.href = '/auth';
+            window.location.href = '/auth.html';
         }
         
         async function loadUserSettings() {

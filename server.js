@@ -357,6 +357,13 @@ app.post('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
 
 // Serve the authentication page
 app.get('/auth', (req, res) => {
+  console.log('Serving auth.html');
+  res.sendFile(path.join(__dirname, 'auth.html'));
+});
+
+// Also serve auth.html directly
+app.get('/auth.html', (req, res) => {
+  console.log('Serving auth.html directly');
   res.sendFile(path.join(__dirname, 'auth.html'));
 });
 
