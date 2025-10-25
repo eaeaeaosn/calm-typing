@@ -209,6 +209,7 @@ app.post('/api/auth/register', async (req, res) => {
     // Check if user already exists
     db.get('SELECT id FROM users WHERE username = ? OR email = ?', [username, email], async (err, row) => {
       if (err) {
+        console.error('Database error during user check:', err);
         return res.status(500).json({ error: 'Database error' });
       }
       
@@ -220,16 +221,20 @@ app.post('/api/auth/register', async (req, res) => {
       const saltRounds = 12;
       const passwordHash = await bcrypt.hash(password, saltRounds);
       
+      // Generate a unique ID for the user
+      const userId = uuidv4();
+      
       db.run(
-        'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-        [username, email, passwordHash],
+        'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)',
+        [userId, username, email, passwordHash],
         function(err) {
           if (err) {
+            console.error('Database error during user creation:', err);
             return res.status(500).json({ error: 'Failed to create user' });
           }
           
           const token = jwt.sign(
-            { userId: this.lastID, username, email },
+            { userId: userId, username, email },
             process.env.JWT_SECRET || 'your-jwt-secret',
             { expiresIn: '24h' }
           );
@@ -237,7 +242,7 @@ app.post('/api/auth/register', async (req, res) => {
           res.json({ 
             message: 'User created successfully',
             token,
-            user: { id: this.lastID, username, email }
+            user: { id: userId, username, email }
           });
         }
       );
@@ -258,6 +263,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], async (err, user) => {
       if (err) {
+        console.error('Database error during login:', err);
         return res.status(500).json({ error: 'Database error' });
       }
       
