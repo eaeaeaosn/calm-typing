@@ -1,4 +1,95 @@
 const express = require('express');
+const http = require('http');
+const path = require('path');
+const WebSocket = require('ws');
+
+const app = express();
+app.use(express.json());
+
+// Serve static files (the web app)
+app.use(express.static(path.join(__dirname)));
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+// In-memory groups: { code: { members: Map(userId->ws), history: [ {id,userId,name,words,timestamp} ] } }
+const groups = new Map();
+
+function ensureGroup(code) {
+  if (!groups.has(code)) {
+    groups.set(code, { members: new Map(), history: [] });
+  }
+  return groups.get(code);
+}
+
+function broadcastToGroup(code, message) {
+  const g = groups.get(code);
+  if (!g) return;
+  const raw = JSON.stringify(message);
+  for (const [, ws] of g.members) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(raw);
+  }
+}
+
+wss.on('connection', (ws, req) => {
+  ws.isAlive = true;
+  ws.on('pong', () => ws.isAlive = true);
+
+  ws.on('message', (data) => {
+    let msg;
+    try { msg = JSON.parse(data); } catch (e) { return; }
+    const { type } = msg || {};
+    if (type === 'join') {
+      const { groupCode, userId, name } = msg;
+      if (!groupCode) return;
+      const g = ensureGroup(groupCode);
+      ws._groupCode = groupCode;
+      ws._userId = userId || String(Date.now()) + Math.random().toString(36).slice(2,6);
+      ws._name = name || 'Guest';
+      g.members.set(ws._userId, ws);
+      // notify member list change (optional)
+      broadcastToGroup(groupCode, { type: 'presence', groupCode, userId: ws._userId, name: ws._name, action: 'join' });
+    } else if (type === 'publish') {
+      const { groupCode, userId, name, words } = msg;
+      if (!groupCode || !words) return;
+      const g = ensureGroup(groupCode);
+      const entry = { id: String(Date.now()) + Math.random().toString(36).slice(2,6), userId: userId || ws._userId, name: name || ws._name || 'Guest', words, timestamp: new Date().toISOString() };
+      g.history.push(entry);
+      // broadcast to group
+      broadcastToGroup(groupCode, { type: 'publish', entry });
+    } else if (type === 'getHistory') {
+      const { groupCode } = msg;
+      const g = groups.get(groupCode) || { history: [] };
+      try {
+        ws.send(JSON.stringify({ type: 'history', groupCode, history: g.history.slice() }));
+      } catch (e) {}
+    }
+  });
+
+  ws.on('close', () => {
+    // remove from group
+    const code = ws._groupCode;
+    const id = ws._userId;
+    if (code && groups.has(code)) {
+      const g = groups.get(code);
+      if (g.members.has(id)) g.members.delete(id);
+      broadcastToGroup(code, { type: 'presence', groupCode: code, userId: id, action: 'leave' });
+    }
+  });
+});
+
+// Periodic ping to keep connections alive
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (!ws.isAlive) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping(() => {});
+  });
+}, 30000);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Community server listening on http://localhost:${PORT}`));
+const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');

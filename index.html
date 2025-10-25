@@ -745,6 +745,37 @@
             z-index: 1550;
             pointer-events: none; /* allow clicks to pass through, we'll use mousemove on document */
         }
+
+        /* Bullet (floating soft words) screen */
+        #bullet-screen {
+            position: fixed;
+            top: 8%;
+            left: 0;
+            right: 0;
+            height: 84%;
+            pointer-events: none;
+            z-index: 1400;
+            overflow: visible;
+        }
+
+        .bullet-word {
+            position: absolute;
+            white-space: nowrap;
+            font-family: 'Times New Roman', serif;
+            font-weight: 500;
+            font-size: 20px;
+            color: rgba(255,255,255,0.95);
+            padding: 8px 12px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(4px) saturate(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            opacity: 0;
+            transform: translateX(110%);
+            transition: transform 6s linear, opacity 6s linear;
+            filter: blur(0.2px);
+            will-change: transform, opacity, top;
+        }
         
         /* Authentication Modal Styles */
         .auth-modal {
@@ -1201,6 +1232,7 @@
     </div>
     
     <div id="canvas-container"></div>
+    <div id="bullet-screen" aria-hidden="true"></div>
     
     <!-- Personal History Sidebar -->
     <aside id="personal-sidebar" aria-hidden="true">
@@ -1305,6 +1337,20 @@
                 <button id="audio-remove-btn" class="history-btn clear" style="flex:1;">Remove</button>
             </div>
             <div class="info" id="audio-current-label">No music assigned for current background.</div>
+            <div class="divider"></div>
+            <h3>Community</h3>
+            <div class="section-label">Group Code:</div>
+            <input type="text" id="community-code" placeholder="Enter group code" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+            <div class="section-label">Display Name:</div>
+            <input type="text" id="community-name" placeholder="Your name (guest ok)" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="community-join-btn" class="history-btn" style="flex:1; background:#1976d2; color:#fff;">Join Group</button>
+                <button id="community-leave-btn" class="history-btn clear" style="flex:1;">Leave</button>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="community-history-btn" class="history-btn" style="flex:1;">Group History</button>
+                <div id="community-status" style="align-self:center;color:#666;font-size:13px;">Not connected</div>
+            </div>
         </div>
     </div>
     
@@ -3315,6 +3361,154 @@
                 if (window.FishFX) {
                     window.FishFX.onKeydown(e);
                 }
+            }
+        });
+
+        // --- Community WebSocket client & bullet screen ---
+        const COMMUNITY_CONFIG = {
+            serverUrl: (location.protocol === 'https:' ? 'wss://' : 'ws://') + (location.hostname || 'localhost') + ':3000'
+        };
+        let communityWs = null;
+        let communityGroup = null;
+        let communityUserId = null;
+        let communityName = null;
+
+        const communityJoinBtn = document.getElementById('community-join-btn');
+        const communityLeaveBtn = document.getElementById('community-leave-btn');
+        const communityCodeInput = document.getElementById('community-code');
+        const communityNameInput = document.getElementById('community-name');
+        const communityStatus = document.getElementById('community-status');
+        const communityHistoryBtn = document.getElementById('community-history-btn');
+        const bulletScreen = document.getElementById('bullet-screen');
+
+        function setCommunityStatus(text) { if (communityStatus) communityStatus.textContent = text; }
+
+        function connectCommunityIfNeeded() {
+            if (communityWs && communityWs.readyState === WebSocket.OPEN) return;
+            try {
+                communityWs = new WebSocket(COMMUNITY_CONFIG.serverUrl.replace('http','ws'));
+            } catch (e) {
+                communityWs = new WebSocket(COMMUNITY_CONFIG.serverUrl);
+            }
+            communityWs.addEventListener('open', () => setCommunityStatus('Connected'));
+            communityWs.addEventListener('close', () => setCommunityStatus('Disconnected'));
+            communityWs.addEventListener('error', () => setCommunityStatus('Error'));
+            communityWs.addEventListener('message', (ev) => {
+                try {
+                    const msg = JSON.parse(ev.data);
+                    if (msg.type === 'publish' && msg.entry) {
+                        const { entry } = msg;
+                        // show floating words for published entry
+                        showFloatingWords(entry.words, { author: entry.name });
+                    } else if (msg.type === 'history') {
+                        renderCommunityHistory(msg.history || []);
+                    }
+                } catch (e) {}
+            });
+        }
+
+        function joinCommunity(groupCode, name) {
+            if (!groupCode) { alert('Please enter a group code to join'); return; }
+            communityGroup = groupCode;
+            communityUserId = String(Date.now()) + Math.random().toString(36).slice(2,6);
+            communityName = name || ('Guest' + communityUserId.slice(-4));
+            connectCommunityIfNeeded();
+            const payload = { type: 'join', groupCode: communityGroup, userId: communityUserId, name: communityName };
+            communityWs.addEventListener('open', () => communityWs.send(JSON.stringify(payload)), { once: true });
+            if (communityWs.readyState === WebSocket.OPEN) communityWs.send(JSON.stringify(payload));
+            setCommunityStatus('Joined: ' + communityGroup + ' as ' + communityName);
+        }
+
+        function leaveCommunity() {
+            if (!communityGroup || !communityWs) { setCommunityStatus('Not connected'); return; }
+            try { communityWs.close(); } catch (e) {}
+            communityGroup = null; communityUserId = null; communityName = null; communityWs = null;
+            setCommunityStatus('Left');
+        }
+
+        function publishWordsToCommunity(words) {
+            if (!communityGroup || !communityWs || communityWs.readyState !== WebSocket.OPEN) {
+                // still show locally
+                showFloatingWords(words, { author: communityName || 'You' });
+                setCommunityStatus('Not connected - local only');
+                return;
+            }
+            const payload = { type: 'publish', groupCode: communityGroup, userId: communityUserId, name: communityName, words };
+            communityWs.send(JSON.stringify(payload));
+        }
+
+        function requestCommunityHistory() {
+            if (!communityGroup || !communityWs || communityWs.readyState !== WebSocket.OPEN) {
+                alert('Join a group first to view its history');
+                return;
+            }
+            communityWs.send(JSON.stringify({ type: 'getHistory', groupCode: communityGroup }));
+        }
+
+        communityJoinBtn.addEventListener('click', () => joinCommunity(communityCodeInput.value.trim(), communityNameInput.value.trim()));
+        communityLeaveBtn.addEventListener('click', () => leaveCommunity());
+        communityHistoryBtn.addEventListener('click', () => requestCommunityHistory());
+
+        // Floating soft bullet screen renderer
+        function showFloatingWords(words, opts = {}) {
+            if (!words || !words.length) return;
+            const topPct = () => (10 + Math.random() * 80) + '%';
+            const duration = 5500 + Math.random() * 2500;
+            words.forEach((w, i) => {
+                const el = document.createElement('div');
+                el.className = 'bullet-word';
+                el.textContent = w;
+                // staggered vertical placement
+                const t = parseFloat(topPct());
+                el.style.top = (10 + (i * 6) % 70) + '%';
+                // small size variation
+                const size = 16 + Math.floor(Math.random() * 18);
+                el.style.fontSize = size + 'px';
+                el.style.left = '100%';
+                el.style.opacity = '0';
+                bulletScreen.appendChild(el);
+                // force reflow then start animation
+                requestAnimationFrame(() => {
+                    el.style.transition = `transform ${duration}ms linear, opacity ${duration}ms linear`;
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateX(-120%)';
+                });
+                // cleanup
+                setTimeout(() => { try { el.remove(); } catch (e) {} }, duration + 200);
+            });
+        }
+
+        // Render community history into the history modal
+        function renderCommunityHistory(history) {
+            // reuse history modal UI
+            historyModal.classList.add('show');
+            const listEl = document.getElementById('history-list');
+            if (!history || history.length === 0) {
+                listEl.innerHTML = '<div class="history-empty">No community entries yet.</div>';
+                return;
+            }
+            let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+            history.slice().reverse().forEach(h => {
+                const words = (h.words || []).join(' ');
+                html += `<div style="padding:10px;border-radius:8px;background:rgba(255,255,255,0.95);color:#000;"><div style="font-weight:700;margin-bottom:6px;">${h.name || 'Guest'}</div><div style="font-style:italic;color:#111">${words}</div><div style="font-size:12px;color:#666;margin-top:6px">${new Date(h.timestamp).toLocaleString()}</div></div>`;
+            });
+            html += '</div>';
+            listEl.innerHTML = html;
+        }
+
+        // publish on Shift+Enter: take last revised sentence's words
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                if (!sentenceHistory || sentenceHistory.length === 0) {
+                    setCommunityStatus('No revised sentence to publish');
+                    return;
+                }
+                const latest = sentenceHistory[sentenceHistory.length - 1];
+                const text = latest && latest.text ? latest.text : String(latest || '');
+                const words = text.replace(/[.?,!;:"()]/g, '').split(/\s+/).filter(Boolean);
+                if (words.length === 0) { setCommunityStatus('No words to publish'); return; }
+                publishWordsToCommunity(words);
             }
         });
 
