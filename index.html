@@ -5,6 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Floating Type Animation</title>
     <style>
+        /* Focused reading popup for personal history */
+        #personal-popup-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.32);
+            z-index: 6000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #personal-popup {
+            background: #fff;
+            color: #222;
+            max-width: 520px;
+            min-width: 260px;
+            padding: 36px 32px 28px 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            font-size: 1.18rem;
+            font-family: Arial, sans-serif;
+            line-height: 1.7;
+            text-align: left;
+            position: relative;
+            white-space: pre-wrap;
+        }
+        #personal-popup-close {
+            position: absolute;
+            top: 12px;
+            right: 18px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #888;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        #personal-popup-close:hover {
+            color: #1976d2;
+        }
+        /* Minimal glowing Courier reminder */
+        #courier-reminder {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2.1rem;
+            color: #888;
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+            text-shadow: 0 0 18px #1976d2, 0 0 8px #fff, 0 0 2px #1976d2, 0 0 16px #888;
+            z-index: 5000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s cubic-bezier(.4,2,.6,1);
+        }
+        #courier-reminder.show {
+            opacity: 1;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -14,7 +75,7 @@
         body {
             background: #ffffff;
             overflow: hidden;
-            font-family: 'Times New Roman', serif;
+            font-family: Arial, sans-serif;
             position: relative;
         }
         
@@ -535,7 +596,7 @@
             background: rgba(255, 255, 255, 0.95);
             color: #000;
             border-radius: 8px;
-            font-family: 'Times New Roman', serif;
+            font-family: Arial, sans-serif;
             font-size: 18px;
             line-height: 1.8;
             text-align: justify;
@@ -925,9 +986,105 @@
             margin-bottom: 20px;
             font-size: 0.9rem;
         }
+        /* Welcome overlay styles */
+        .welcome-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.45);
+            backdrop-filter: blur(10px) saturate(120%);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
+            z-index: 4000;
+            pointer-events: auto;
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+
+        .welcome-overlay.hidden { opacity: 0; visibility: hidden; transform: translateY(-6px); pointer-events: none; }
+
+        .welcome-card {
+            width: min(920px, 92%);
+            max-width: 1100px;
+            padding: 48px 36px;
+            border-radius: 18px;
+            /* Remove the white card background so words sit directly on the blurred backdrop */
+            background: transparent;
+            box-shadow: none;
+            text-align: center;
+            position: relative;
+            overflow: visible;
+        }
+
+        .welcome-title {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(44px, 8vw, 110px);
+            line-height: 1;
+            color: #111;
+            font-weight: 700;
+            margin-bottom: 18px;
+            text-shadow: 0 12px 36px rgba(0,0,0,0.08);
+            letter-spacing: 0.6px;
+        }
+
+        .welcome-subtitle {
+            font-family: Arial, sans-serif;
+            font-size: clamp(18px, 2.6vw, 28px);
+            color: #444;
+            margin-bottom: 28px;
+            opacity: 0.95;
+        }
+
+        .welcome-controls { display:flex; gap:12px; justify-content:center; }
+
+        .welcome-btn {
+            padding: 12px 18px;
+            border-radius: 12px;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+            background: #1976d2;
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(25,118,210,0.18);
+        }
+
+        .welcome-btn.secondary {
+            background: transparent;
+            color: #1976d2;
+            border: 1px solid rgba(25,118,210,0.12);
+            box-shadow: none;
+        }
+
+        /* Small decorative floating chars inside the welcome card */
+        .welcome-floating { position:absolute; inset:0; pointer-events:none; }
+    .welcome-floating .char { font-size: clamp(24px, 4vw, 48px); opacity:0.95; text-shadow:0 0 18px rgba(0,0,0,0.08); transition: opacity 2.4s ease, transform 2.4s ease; }
+
+        /* Typewriter caret */
+        .typewriter-caret::after {
+            content: "|";
+            display: inline-block;
+            margin-left: 6px;
+            opacity: 0.95;
+            animation: welcome-blink 1s steps(2, start) infinite;
+            color: #1976d2;
+            transform: translateY(-2px);
+        }
+
+        @keyframes welcome-blink {
+            0% { opacity: 1 }
+            50% { opacity: 0 }
+            100% { opacity: 1 }
+        }
     </style>
 </head>
 <body>
+    <div id="personal-popup-overlay">
+        <div id="personal-popup">
+            <button id="personal-popup-close" title="Close">&times;</button>
+            <div id="personal-popup-content"></div>
+        </div>
+    </div>
+    <div id="courier-reminder">Start typing anywhere...</div>
     <!-- Forest Background -->
     <div id="forest-bg" class="svg-background">
         <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
@@ -1202,6 +1359,28 @@
     
     <div id="canvas-container"></div>
     
+    <!-- Welcome overlay: two pages -->
+    <div id="welcome-overlay" class="welcome-overlay hidden" aria-hidden="true">
+        <div class="welcome-card" role="dialog" aria-modal="true" aria-label="Welcome to CalmType">
+            <div class="welcome-floating" id="welcome-floating"></div>
+
+            <div class="welcome-page" data-page="1">
+                <div class="welcome-title" id="welcome-title-1">Hi, This is CalmType</div>
+                <div class="welcome-subtitle">A calm typing experience — take your time.</div>
+            </div>
+
+            <div class="welcome-page" data-page="2" style="display:none;">
+                <div class="welcome-title" id="welcome-title-2">Start typing anywhere.</div>
+                <div class="welcome-subtitle">Type to create soft floating characters and relax.</div>
+            </div>
+
+            <div class="welcome-controls">
+                <button class="welcome-btn" id="welcome-next">Next</button>
+                <button class="welcome-btn secondary" id="welcome-skip">Skip</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Personal History Sidebar -->
     <aside id="personal-sidebar" aria-hidden="true">
         <div id="personal-sidebar-inner">
@@ -1213,7 +1392,7 @@
             <div id="personal-detail" aria-live="polite">
                 <div id="personal-detail-title"></div>
                 <div id="personal-detail-time" style="font-size:12px;color:#666;margin-bottom:8px;"></div>
-                <div id="personal-detail-text" style="font-family:'Times New Roman',serif; font-style:italic; color:#000; white-space:pre-wrap;"></div>
+                <div id="personal-detail-text" style="font-family:Arial,sans-serif; font-style:italic; color:#000; white-space:pre-wrap;"></div>
                 <div style="margin-top:12px; display:flex; gap:8px;">
                     <button id="personal-delete" class="history-btn clear">Delete</button>
                 </div>
@@ -1263,7 +1442,6 @@
             <div class="section-label">Select Font:</div>
             <select id="font-select">
                 <option value="Courier New, monospace">Courier New</option>
-                <option value="Times New Roman, serif">Times New Roman</option>
                 <option value="Arial, sans-serif">Arial</option>
                 <option value="Georgia, serif">Georgia</option>
                 <option value="Verdana, sans-serif">Verdana</option>
@@ -1410,6 +1588,138 @@
         let currentUser = null;
         
         const container = document.getElementById('canvas-container');
+        // --- Welcome pages: two-step onboarding overlay ---
+        const welcomeOverlay = document.getElementById('welcome-overlay');
+        const welcomeFloating = document.getElementById('welcome-floating');
+        let _welcomeInterval = null;
+        let _welcomePage = 1;
+        let _typeTimer = null;
+        let _typeIndex = 0;
+        let _typeCancel = false;
+
+        /* Backdrop blur handled via CSS using backdrop-filter on the overlay.
+           We provide a typewriter effect for the large Courier titles. */
+
+        function showWelcomeOverlay() {
+            if (!welcomeOverlay) return;
+            welcomeOverlay.classList.remove('hidden');
+            welcomeOverlay.setAttribute('aria-hidden', 'false');
+            startWelcomeFloating();
+            // start typing for current page
+            startTypeForPage(_welcomePage);
+        }
+
+        function hideWelcomeOverlay() {
+            if (!welcomeOverlay) return;
+            welcomeOverlay.classList.add('hidden');
+            welcomeOverlay.setAttribute('aria-hidden', 'true');
+            stopWelcomeFloating();
+            stopTypewriter();
+            setTimeout(enableCourierReminderAfterWelcome, 400);
+        }
+
+        function startWelcomeFloating() {
+            stopWelcomeFloating();
+            if (!welcomeFloating) return;
+            _welcomeInterval = setInterval(() => spawnWelcomeChar(), 420);
+        }
+
+        function stopWelcomeFloating() {
+            if (_welcomeInterval) { clearInterval(_welcomeInterval); _welcomeInterval = null; }
+            if (welcomeFloating) { welcomeFloating.innerHTML = ''; }
+        }
+
+        function spawnWelcomeChar() {
+            if (!welcomeFloating) return;
+            const chars = ['•', '~', '·', '˚', '•', '.', '•'];
+            const ch = chars[Math.floor(Math.random() * chars.length)];
+            const el = document.createElement('div');
+            el.className = 'char';
+            el.textContent = ch;
+            const rect = welcomeFloating.getBoundingClientRect();
+            const x = Math.random() * (rect.width - 40) + 20;
+            const y = Math.random() * (rect.height - 40) + 20;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            const size = Math.round(18 + Math.random() * 48);
+            el.style.fontSize = size + 'px';
+            el.style.opacity = '0.95';
+            el.style.transform = 'translate(-50%, -50%)';
+            welcomeFloating.appendChild(el);
+            // linger longer before fading and removal for a calmer effect
+            setTimeout(() => { el.style.opacity = '0'; }, 1200 + Math.random() * 1200);
+            setTimeout(() => { try { el.remove(); } catch (e) {} }, 2800 + Math.random() * 1200);
+        }
+
+        function showPage(n) {
+            document.querySelectorAll('.welcome-page').forEach(p => p.style.display = 'none');
+            const p = document.querySelector(`.welcome-page[data-page="${n}"]`);
+            if (p) p.style.display = '';
+            _welcomePage = n;
+            // start typing for that page
+            startTypeForPage(n);
+        }
+
+        function nextWelcomePage() {
+            if (_welcomePage === 1) { showPage(2); return; }
+            dismissWelcome(true);
+        }
+
+        function dismissWelcome(persist) {
+            hideWelcomeOverlay();
+            try { if (persist) localStorage.setItem('calm_welcome_dismissed', '1'); } catch (e) {}
+        }
+
+        // Typewriter implementation
+        function startTypeForPage(pageNum) {
+            stopTypewriter();
+            _typeCancel = false;
+            const titleEl = document.querySelector(`.welcome-page[data-page="${pageNum}"] .welcome-title`);
+            if (!titleEl) return;
+            // Use data attribute for full text (or read current innerText)
+            const full = titleEl.getAttribute('data-full') || titleEl.textContent || '';
+            // store full text in data-full and clear visible text
+            titleEl.setAttribute('data-full', full.trim());
+            titleEl.textContent = '';
+            titleEl.classList.add('typewriter-caret');
+            const speed = 45 + Math.floor(Math.random() * 40); // 45-85ms per char
+            _typeIndex = 0;
+            _typeTimer = setInterval(() => {
+                if (_typeCancel) { stopTypewriter(); return; }
+                const fullText = titleEl.getAttribute('data-full') || '';
+                if (_typeIndex >= fullText.length) { stopTypewriter(); return; }
+                titleEl.textContent += fullText.charAt(_typeIndex);
+                _typeIndex++;
+            }, speed);
+        }
+
+        function stopTypewriter() {
+            if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
+            _typeCancel = true;
+            document.querySelectorAll('.welcome-title.typewriter-caret').forEach(el => el.classList.remove('typewriter-caret'));
+        }
+
+        // Wire up overlay controls after DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const next = document.getElementById('welcome-next');
+            const skip = document.getElementById('welcome-skip');
+            if (next) next.addEventListener('click', nextWelcomePage);
+            if (skip) skip.addEventListener('click', function() { dismissWelcome(true); });
+
+            if (welcomeOverlay) {
+                welcomeOverlay.addEventListener('click', function(e) {
+                    if (e.target === welcomeOverlay) { dismissWelcome(true); }
+                });
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (!welcomeOverlay || welcomeOverlay.classList.contains('hidden')) return;
+                if (e.key === 'Enter') { nextWelcomePage(); }
+                if (e.key === 'Escape') { dismissWelcome(true); }
+            });
+
+            // Welcome overlay will be shown after the auth modal is closed (hideAuthModal)
+        });
         const fontUpload = document.getElementById('font-upload');
         const fontSelect = document.getElementById('font-select');
         const colorPicker = document.getElementById('color-picker');
@@ -1585,6 +1895,15 @@
                         original: word !== correctedWord ? word : null,
                         timestamp: new Date().toISOString()
                     });
+                    // If the word was replaced by an emoji, also add to sentenceHistory as a revised entry
+                    if (word !== correctedWord && /[\u2190-\u2BFF\u2600-\u27BF\u1F300-\u1F6FF\u1F900-\u1F9FF\u1F600-\u1F64F\u1F680-\u1F6FF\u1F1E6-\u1F1FF\u2700-\u27BF\u1F191-\u1F251\u1F004-\u1F0CF\u1F170-\u1F171\u1F17E-\u1F17F\u1F18E\u3030\u2B50\u2B06\u2194-\u21AA\u2934-\u2935\u25AA-\u25AB\u25FE-\u25FF\u25B6\u25C0\u25FB-\u25FE\u2600-\u26FF\u1F300-\u1F5FF\u1F600-\u1F64F\u1F680-\u1F6FF\u1F700-\u1F77F\u1F780-\u1F7FF\u1F800-\u1F8FF\u1F900-\u1F9FF\u1FA00-\u1FA6F\u1FA70-\u1FAFF\u2300-\u23FF\u2B05-\u2B07\u2934-\u2935\u25AA-\u25AB\u25FE-\u25FF\u25B6\u25C0\u25FB-\u25FE\u2600-\u26FF\u1F300-\u1F5FF\u1F600-\u1F64F\u1F680-\u1F6FF\u1F700-\u1F77F\u1F780-\u1F7FF\u1F800-\u1F8FF\u1F900-\u1F9FF\u1FA00-\u1FA6F\u1FA70-\u1FAFF\u2300-\u23FF]/.test(correctedWord)) {
+                        sentenceHistory.push({
+                            text: correctedWord,
+                            original: word,
+                            timestamp: new Date().toISOString()
+                        });
+                        saveHistory();
+                    }
                     saveHistory();
                     console.log(`Saved to history: ${word} → ${correctedWord}`);
                 } catch (error) {
@@ -1629,8 +1948,8 @@
                 let html = '';
                 html += '<div>';
                 html += sentenceHistory.map(item => {
-                    // Show revised sentence in italic Times New Roman, black, no highlight
-                    return `<span style=\"font-family:'Times New Roman',serif; font-style:italic; color:#000; margin-right:8px;\">${item.text}</span>`;
+                    // Show revised sentence in italic Arial, black, no highlight
+                    return `<span style=\"font-family:Arial,sans-serif; font-style:italic; color:#000; margin-right:8px;\">${item.text}</span>`;
                 }).join(' ');
                 html += '</div>';
                 sentenceList.innerHTML = html;
@@ -1798,9 +2117,47 @@
                 item.className = 'personal-item';
                 item.dataset.id = entry.id;
                 item.innerHTML = `<div class=\"personal-item-title\">${entry.title}</div><div class=\"personal-item-time\">${new Date(entry.timestamp).toLocaleString()}</div>`;
-                item.addEventListener('click', () => selectPersonalEntry(entry.id));
+                item.addEventListener('click', () => {
+                    selectPersonalEntry(entry.id);
+                    showPersonalPopup(entry.text, entry.title, entry.timestamp);
+                });
                 listEl.appendChild(item);
             });
+        // Focused reading popup for personal history
+        function showPersonalPopup(text, title, timestamp) {
+            const overlay = document.getElementById('personal-popup-overlay');
+            const content = document.getElementById('personal-popup-content');
+            const closeBtn = document.getElementById('personal-popup-close');
+            if (!overlay || !content || !closeBtn) return;
+            content.innerHTML = '';
+            if (title) {
+                const t = document.createElement('div');
+                t.style.fontWeight = 'bold';
+                t.style.fontSize = '1.1rem';
+                t.style.marginBottom = '10px';
+                t.textContent = title;
+                content.appendChild(t);
+            }
+            if (timestamp) {
+                const ts = document.createElement('div');
+                ts.style.fontSize = '0.95rem';
+                ts.style.color = '#888';
+                ts.style.marginBottom = '18px';
+                ts.textContent = new Date(timestamp).toLocaleString();
+                content.appendChild(ts);
+            }
+            const para = document.createElement('div');
+            para.textContent = text;
+            content.appendChild(para);
+            overlay.style.display = 'flex';
+            setTimeout(() => { overlay.focus && overlay.focus(); }, 10);
+        }
+        document.getElementById('personal-popup-close').onclick = function() {
+            document.getElementById('personal-popup-overlay').style.display = 'none';
+        };
+        document.getElementById('personal-popup-overlay').onclick = function(e) {
+            if (e.target === this) this.style.display = 'none';
+        };
         }
 
         function selectPersonalEntry(id) {
@@ -1907,12 +2264,45 @@
         }
 
         // Keyboard handler: Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) -> batch save
+        let typingTimeout = null;
+        const REMINDER_IDLE_MS = 3000;
+        function showCourierReminder() {
+            const el = document.getElementById('courier-reminder');
+            if (!el) return;
+            // Don't show if welcome overlay or auth modal is visible
+            const welcome = document.getElementById('welcome-overlay');
+            const auth = document.getElementById('auth-modal');
+            if ((welcome && !welcome.classList.contains('hidden') && welcome.getAttribute('aria-hidden') !== 'true') ||
+                (auth && auth.style.display !== 'none' && auth.style.display !== '')) {
+                el.classList.remove('show');
+                el.style.display = 'none';
+                return;
+            }
+            el.style.display = 'block';
+            el.classList.add('show');
+        }
+        function hideCourierReminder() {
+            const el = document.getElementById('courier-reminder');
+            if (!el) return;
+            el.classList.remove('show');
+        }
+        function resetCourierReminderIdle() {
+            hideCourierReminder();
+            if (typingTimeout) clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(showCourierReminder, REMINDER_IDLE_MS);
+        }
+
+        // Show reminder after Ctrl+Enter restore
         document.addEventListener('keydown', function(e) {
             const isCmdEnter = (e.metaKey && e.key === 'Enter');
             const isCtrlEnter = (e.ctrlKey && e.key === 'Enter');
             if (isCmdEnter || isCtrlEnter) {
                 e.preventDefault();
                 saveAllRevisedSentencesAsPersonal();
+                setTimeout(() => {
+                    showCourierReminder();
+                    if (typingTimeout) clearTimeout(typingTimeout);
+                }, 350);
             }
         });
 
@@ -2045,6 +2435,16 @@
             if (authModal) {
                 authModal.style.display = 'none';
             }
+            // After the auth modal is closed, show the welcome overlay (unless already dismissed)
+            try {
+                const dismissed = localStorage.getItem('calm_welcome_dismissed');
+                if (!dismissed) {
+                    // small delay so the UI settles after modal hide
+                    setTimeout(() => { showWelcomeOverlay(); }, 220);
+                } else {
+                    setTimeout(enableCourierReminderAfterWelcome, 400);
+                }
+            } catch (e) { setTimeout(enableCourierReminderAfterWelcome, 400); }
         }
         
         // Create guest session automatically
@@ -3136,16 +3536,16 @@
             container.appendChild(charElement);
             activeChars++;
             
-            // Remove after animation
+            // Remove after animation (linger a bit longer for calmer effect)
             setTimeout(() => {
                 charElement.remove();
                 activeChars--;
-                
+
                 // Reset position when all chars are cleared
                 if (activeChars === 0) {
                     charPosition = 0;
                 }
-            }, 1200);
+            }, 2400);
         }
         
         // Hide instructions after first keypress
@@ -3157,6 +3557,23 @@
                     document.getElementById('instructions').style.display = 'none';
                 }, 500);
                 firstKey = false;
+            }
+            hideCourierReminder();
+            if (typingTimeout) clearTimeout(typingTimeout);
+        });
+
+        // Show reminder after idle, and on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(showCourierReminder, 600);
+            document.addEventListener('mousemove', resetCourierReminderIdle, { once: true });
+        });
+
+        // Hide reminder and reset idle timer on any typing
+        document.addEventListener('keydown', function(e) {
+            // Ignore modifier keys
+            if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter' || e.key === ' ') {
+                hideCourierReminder();
+                resetCourierReminderIdle();
             }
         });
         
