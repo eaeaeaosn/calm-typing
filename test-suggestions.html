@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Word Suggestions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-area {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        .suggestions {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: 5px;
+            min-height: 50px;
+        }
+        .suggestion-word {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+        .suggestion-word:hover {
+            background: #0056b3;
+        }
+        .loading {
+            opacity: 0.5;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Word Suggestion Test</h1>
+    
+    <div class="test-area">
+        <h3>Test Local Word Suggestions</h3>
+        <p>Type at least 2 characters to see word suggestions:</p>
+        <input type="text" id="testInput" placeholder="Type here...">
+        <div id="suggestions" class="suggestions"></div>
+    </div>
+    
+    <div class="test-area">
+        <h3>Console Output</h3>
+        <p>Open browser console (F12) to see debugging information</p>
+    </div>
+
+    <script>
+        // Simplified test version
+        class WordSuggestionTest {
+            constructor() {
+                this.input = document.getElementById('testInput');
+                this.suggestions = document.getElementById('suggestions');
+                this.timeout = null;
+                
+                this.input.addEventListener('input', (e) => {
+                    this.handleInput(e.target.value);
+                });
+            }
+            
+            handleInput(text) {
+                clearTimeout(this.timeout);
+                
+                if (text.length >= 2) {
+                    this.showLoading();
+                    this.timeout = setTimeout(() => {
+                        this.getSuggestions(text);
+                    }, 300);
+                } else {
+                    this.hideSuggestions();
+                }
+            }
+            
+            showLoading() {
+                this.suggestions.innerHTML = '<span class="loading">Loading suggestions...</span>';
+            }
+            
+            getSuggestions(partialWord) {
+                const commonWords = [
+                    'about', 'above', 'after', 'again', 'along', 'among', 'around', 'always',
+                    'beautiful', 'because', 'before', 'below', 'between', 'beyond', 'bring', 'build',
+                    'could', 'create', 'change', 'children', 'coming', 'country', 'course', 'common',
+                    'different', 'during', 'develop', 'decide', 'describe', 'discuss',
+                    'every', 'example', 'experience', 'especially', 'everything', 'everyone', 'enough',
+                    'family', 'friend', 'follow', 'future', 'further', 'finally', 'favorite',
+                    'great', 'group', 'government', 'general', 'growth', 'ground', 'getting',
+                    'house', 'however', 'history', 'happen', 'health', 'human', 'helpful',
+                    'important', 'include', 'information', 'interest', 'instead', 'individual',
+                    'just', 'journey', 'justice', 'junior', 'japanese', 'jewish', 'journal',
+                    'know', 'knowledge', 'keeping', 'kitchen', 'korean', 'kinds', 'killed',
+                    'little', 'large', 'learn', 'learned', 'learning', 'letter', 'listen',
+                    'make', 'many', 'much', 'more', 'most', 'move', 'moved', 'moving',
+                    'never', 'nothing', 'number', 'natural', 'national', 'necessary', 'normal',
+                    'other', 'only', 'over', 'open', 'order', 'often', 'office', 'operation',
+                    'people', 'place', 'part', 'point', 'problem', 'provide', 'public', 'present',
+                    'question', 'quick', 'quite', 'quality', 'quarter', 'quickly', 'quiet',
+                    'right', 'really', 'rather', 'remember', 'research', 'relationship', 'recent',
+                    'some', 'such', 'should', 'system', 'school', 'small', 'since', 'still',
+                    'think', 'through', 'there', 'their', 'these', 'those', 'three', 'thing',
+                    'under', 'until', 'upon', 'understand', 'university', 'usually', 'united',
+                    'very', 'value', 'various', 'visit', 'voice', 'video', 'village', 'vision',
+                    'water', 'world', 'work', 'would', 'where', 'when', 'what', 'which',
+                    'young', 'year', 'your', 'yesterday', 'yellow', 'youth', 'yoga', 'yacht',
+                    'zero', 'zone', 'zoo', 'zebra', 'zombie', 'zodiac', 'zenith', 'zest'
+                ];
+                
+                const filtered = commonWords
+                    .filter(word => word.toLowerCase().startsWith(partialWord.toLowerCase()))
+                    .slice(0, 5);
+                
+                this.displaySuggestions(filtered);
+            }
+            
+            displaySuggestions(suggestions) {
+                if (suggestions.length === 0) {
+                    this.suggestions.innerHTML = '<span class="loading">No suggestions found</span>';
+                    return;
+                }
+                
+                this.suggestions.innerHTML = '';
+                suggestions.forEach(word => {
+                    const span = document.createElement('span');
+                    span.className = 'suggestion-word';
+                    span.textContent = word;
+                    span.addEventListener('click', () => {
+                        this.input.value = word;
+                        this.hideSuggestions();
+                    });
+                    this.suggestions.appendChild(span);
+                });
+            }
+            
+            hideSuggestions() {
+                this.suggestions.innerHTML = '';
+            }
+        }
+        
+        // Initialize test
+        new WordSuggestionTest();
+    </script>
+</body>
+</html>

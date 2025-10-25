@@ -1,6 +1,7 @@
 class CalmTyping {
     constructor() {
         this.currentLetter = document.getElementById('currentLetter');
+        this.wordSuggestion = document.getElementById('wordSuggestion');
         this.wordHistory = document.getElementById('wordHistory');
         this.historyList = document.getElementById('historyList');
         this.sentenceContainer = document.getElementById('sentenceContainer');
@@ -8,10 +9,17 @@ class CalmTyping {
         this.musicToggle = document.getElementById('musicToggle');
         
         this.typedLetters = [];
+        this.typedWords = [];
+        this.typedSentences = [];
         this.currentSentence = [];
         this.isHistoryVisible = false;
         this.isMusicPlaying = false;
         this.currentText = '';
+        this.suggestionTimeout = null;
+        
+        // DeepSeek API configuration
+        this.deepseekApiKey = typeof DEEPSEEK_CONFIG !== 'undefined' ? DEEPSEEK_CONFIG.apiKey : 'YOUR_DEEPSEEK_API_KEY';
+        this.deepseekApiUrl = typeof DEEPSEEK_CONFIG !== 'undefined' ? DEEPSEEK_CONFIG.apiUrl : 'https://api.deepseek.com/v1/chat/completions';
         
         this.init();
     }
@@ -95,11 +103,15 @@ class CalmTyping {
         }
     }
     
-    handleSpace() {
+    async handleSpace() {
         if (this.currentText.trim()) {
-            this.currentSentence.push(this.currentText.trim());
+            // Auto-correct the word before saving
+            const correctedWord = await this.autoCorrectWord(this.currentText.trim());
+            this.currentSentence.push(correctedWord);
+            this.typedWords.push(correctedWord);
             this.currentText = '';
             this.clearCurrentLetter();
+            this.hideWordSuggestions();
         }
     }
     
@@ -112,6 +124,121 @@ class CalmTyping {
     clearCurrentLetter() {
         this.currentLetter.style.opacity = '0';
         this.currentLetter.style.transform = 'scale(0.8)';
+    }
+    
+    // Auto-correction methods
+    async autoCorrectWord(word) {
+        console.log('Auto-correcting word:', word);
+        
+        // Check if API key is set
+        if (this.deepseekApiKey === 'YOUR_DEEPSEEK_API_KEY' || !this.deepseekApiKey) {
+            console.log('DeepSeek API key not configured, using local correction');
+            return this.getLocalCorrection(word);
+        }
+        
+        try {
+            console.log('Calling DeepSeek API for correction...');
+            const correctedWord = await this.callDeepSeekCorrection(word);
+            console.log('DeepSeek correction:', correctedWord);
+            return correctedWord;
+        } catch (error) {
+            console.log('DeepSeek API error:', error);
+            console.log('Falling back to local correction');
+            return this.getLocalCorrection(word);
+        }
+    }
+    
+    async callDeepSeekCorrection(word) {
+        const response = await fetch(this.deepseekApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.deepseekApiKey}`
+            },
+            body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages: [
+                    {
+                        role: 'user',
+                        content: `Correct this misspelled word to the most likely intended English word: "${word}". Return only the corrected word, nothing else.`
+                    }
+                ],
+                max_tokens: 20,
+                temperature: 0.3
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API request failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const correctedWord = data.choices[0].message.content.trim();
+        
+        return correctedWord || word; // Return original if correction fails
+    }
+    
+    getLocalCorrection(word) {
+        // Simple local correction using common misspellings
+        const corrections = {
+            // Common misspellings
+            'teh': 'the',
+            'adn': 'and',
+            'taht': 'that',
+            'recieve': 'receive',
+            'seperate': 'separate',
+            'occured': 'occurred',
+            'definately': 'definitely',
+            'accomodate': 'accommodate',
+            'begining': 'beginning',
+            'beleive': 'believe',
+            'calender': 'calendar',
+            'cemetary': 'cemetery',
+            'concious': 'conscious',
+            'existance': 'existence',
+            'goverment': 'government',
+            'independant': 'independent',
+            'occassion': 'occasion',
+            'priviledge': 'privilege',
+            'rythm': 'rhythm',
+            'thier': 'their',
+            'untill': 'until',
+            'wich': 'which',
+            'writting': 'writing',
+            'youself': 'yourself',
+            'acheive': 'achieve',
+            'becuase': 'because',
+            'comming': 'coming',
+            'differnt': 'different',
+            'enviroment': 'environment',
+            'finnally': 'finally',
+            'frend': 'friend',
+            'grate': 'great',
+            'happend': 'happened',
+            'immediatly': 'immediately',
+            'knowlege': 'knowledge',
+            'lenght': 'length',
+            'mispell': 'misspell',
+            'neccessary': 'necessary',
+            'occured': 'occurred',
+            'publically': 'publicly',
+            'recieve': 'receive',
+            'seperate': 'separate',
+            'succesful': 'successful',
+            'thier': 'their',
+            'untill': 'until',
+            'wich': 'which',
+            'writting': 'writing'
+        };
+        
+        const corrected = corrections[word.toLowerCase()] || word;
+        console.log('Local correction:', word, '->', corrected);
+        return corrected;
+    }
+    
+    hideWordSuggestions() {
+        this.wordSuggestion.classList.remove('show');
+        this.wordSuggestion.innerHTML = '';
     }
     
     toggleHistory() {
@@ -136,31 +263,49 @@ class CalmTyping {
     updateHistoryDisplay() {
         this.historyList.innerHTML = '';
         
-        if (this.typedLetters.length === 0) {
-            this.historyList.innerHTML = '<p style="color: rgba(255,255,255,0.6); font-style: italic;">No letters typed yet...</p>';
+        if (this.typedWords.length === 0 && this.typedSentences.length === 0) {
+            this.historyList.innerHTML = '<p style="color: rgba(255,255,255,0.6); font-style: italic;">No words typed yet...</p>';
             return;
         }
         
-        // Show recent letters (last 20)
-        const recentLetters = this.typedLetters.slice(-20);
-        recentLetters.forEach((letter, index) => {
-            const letterElement = document.createElement('div');
-            letterElement.className = 'history-item';
-            letterElement.textContent = `${index + 1}. ${letter.toUpperCase()}`;
-            this.historyList.appendChild(letterElement);
-        });
+        // Show recent words (last 15)
+        if (this.typedWords.length > 0) {
+            const recentWords = this.typedWords.slice(-15);
+            recentWords.forEach((word, index) => {
+                const wordElement = document.createElement('div');
+                wordElement.className = 'history-item';
+                wordElement.textContent = `${index + 1}. ${word}`;
+                this.historyList.appendChild(wordElement);
+            });
+        }
+        
+        // Show recent sentences (last 5)
+        if (this.typedSentences.length > 0) {
+            const recentSentences = this.typedSentences.slice(-5);
+            recentSentences.forEach((sentence, index) => {
+                const sentenceElement = document.createElement('div');
+                sentenceElement.className = 'history-item sentence-item';
+                sentenceElement.style.fontStyle = 'italic';
+                sentenceElement.style.marginTop = '10px';
+                sentenceElement.textContent = `"${sentence}"`;
+                this.historyList.appendChild(sentenceElement);
+            });
+        }
     }
     
-    handleEnter() {
+    async handleEnter() {
         if (this.currentSentence.length > 0 || this.currentText.trim()) {
-            // Add current text to sentence if it exists
+            // Add current text to sentence if it exists (with auto-correction)
             if (this.currentText.trim()) {
-                this.currentSentence.push(this.currentText.trim());
+                const correctedWord = await this.autoCorrectWord(this.currentText.trim());
+                this.currentSentence.push(correctedWord);
+                this.typedWords.push(correctedWord);
             }
             
             // Create sentence animation
             const fullSentence = this.currentSentence.join(' ');
             if (fullSentence.trim()) {
+                this.typedSentences.push(fullSentence);
                 this.animateSentence(fullSentence);
             }
             
@@ -168,6 +313,7 @@ class CalmTyping {
             this.currentText = '';
             this.currentSentence = [];
             this.clearCurrentLetter();
+            this.hideWordSuggestions();
             
             // Add gentle typing sound effect
             this.playTypingSound();
