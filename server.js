@@ -222,7 +222,11 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Check if user already exists
-    db.get('SELECT id FROM users WHERE username = ? OR email = ?', [username, email], async (err, row) => {
+    const checkQuery = process.env.NODE_ENV === 'production' 
+      ? 'SELECT id FROM users WHERE username = $1 OR email = $2'
+      : 'SELECT id FROM users WHERE username = ? OR email = ?';
+    
+    db.get(checkQuery, [username, email], async (err, row) => {
       if (err) {
         console.error('Database error during user check:', err);
         return res.status(500).json({ error: 'Database error' });
@@ -281,7 +285,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], async (err, user) => {
+    const loginQuery = process.env.NODE_ENV === 'production' 
+      ? 'SELECT * FROM users WHERE username = $1 OR email = $2'
+      : 'SELECT * FROM users WHERE username = ? OR email = ?';
+    
+    db.get(loginQuery, [username, username], async (err, user) => {
       if (err) {
         console.error('Database error during login:', err);
         return res.status(500).json({ error: 'Database error' });
@@ -297,7 +305,11 @@ app.post('/api/auth/login', async (req, res) => {
       }
 
       // Update last login
-      db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+      const updateQuery = process.env.NODE_ENV === 'production' 
+        ? 'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1'
+        : 'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?';
+      
+      db.run(updateQuery, [user.id]);
 
       const token = jwt.sign(
         { userId: user.id, username: user.username, email: user.email },
