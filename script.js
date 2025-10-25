@@ -461,3 +461,33 @@ class OceanParticles {
 document.addEventListener('DOMContentLoaded', () => {
     new OceanParticles();
 });
+
+// Rotate table: cycle through multiple themes (5 colors) and rotate button each click
+(function(){
+  const rotateBtn = document.getElementById('rotateTable');
+  if (!rotateBtn) return;
+
+  const themes = ['blue', 'yellow', 'green', 'purple', 'coral'];
+  let currentIndex = 0;
+  let rotationAngle = 0;
+  const step = 360 / themes.length; // 72 degrees for 5 themes
+
+  // initialize default theme
+  document.body.classList.add(`theme-${themes[currentIndex]}`);
+
+  // ensure smooth rotation transition
+  rotateBtn.style.transition = 'transform 0.6s cubic-bezier(.2,.8,.2,1)';
+
+  rotateBtn.addEventListener('click', () => {
+    // advance theme index
+    currentIndex = (currentIndex + 1) % themes.length;
+
+    // remove all theme classes then add the new one
+    themes.forEach(t => document.body.classList.remove(`theme-${t}`));
+    document.body.classList.add(`theme-${themes[currentIndex]}`);
+
+    // rotate the button cumulatively
+    rotationAngle = (rotationAngle + step) % 360;
+    rotateBtn.style.transform = `rotate(${rotationAngle}deg)`;
+  });
+})();
