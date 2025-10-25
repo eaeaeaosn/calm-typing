@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Passages Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            background: #f9f9f9;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Passages Frontend Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Authentication Test</h2>
+        <button onclick="testGuestAuth()">Test Guest Authentication</button>
+        <button onclick="testUserAuth()">Test User Authentication</button>
+        <div id="auth-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Save Passage Test</h2>
+        <textarea id="passage-content" placeholder="Enter test passage content here...">This is a test passage to verify cloud storage functionality.</textarea>
+        <br>
+        <button onclick="testSavePassage()">Save as Guest</button>
+        <button onclick="testSaveUserPassage()">Save as User</button>
+        <div id="save-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Load Passages Test</h2>
+        <button onclick="testLoadGuestPassages()">Load Guest Passages</button>
+        <button onclick="testLoadUserPassages()">Load User Passages</button>
+        <div id="load-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Current Status</h2>
+        <div id="status">
+            <p><strong>Auth Token:</strong> <span id="auth-token">None</span></p>
+            <p><strong>Guest ID:</strong> <span id="guest-id">None</span></p>
+            <p><strong>API Base:</strong> <span id="api-base">Loading...</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Get API base URL
+        const API_BASE = window.location.origin;
+        document.getElementById('api-base').textContent = API_BASE;
+        
+        // Check current auth status
+        function updateStatus() {
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            
+            document.getElementById('auth-token').textContent = authToken ? 'Set' : 'None';
+            document.getElementById('guest-id').textContent = guestId ? guestId : 'None';
+        }
+        
+        // Test guest authentication
+        async function testGuestAuth() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Creating guest session...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/guest`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                localStorage.setItem('guestId', data.guestId);
+                updateStatus();
+                
+                resultDiv.innerHTML = `✅ Guest session created successfully!<br>Guest ID: ${data.guestId}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Guest auth failed: ${error.message}`;
+            }
+        }
+        
+        // Test user authentication
+        async function testUserAuth() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Creating user account...';
+            
+            try {
+                const testUser = {
+                    username: 'testuser' + Date.now(),
+                    email: 'test' + Date.now() + '@example.com',
+                    password: 'testpass123'
+                };
+                
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testUser)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                localStorage.setItem('authToken', data.token);
+                updateStatus();
+                
+                resultDiv.innerHTML = `✅ User registered successfully!<br>Username: ${testUser.username}<br>Token: ${data.token.substring(0, 20)}...`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ User auth failed: ${error.message}`;
+            }
+        }
+        
+        // Test saving passage as guest
+        async function testSavePassage() {
+            const resultDiv = document.getElementById('save-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Saving passage as guest...';
+            
+            try {
+                const guestId = localStorage.getItem('guestId');
+                if (!guestId) {
+                    throw new Error('No guest ID found. Please create a guest session first.');
+                }
+                
+                const content = document.getElementById('passage-content').value;
+                const passageData = {
+                    title: 'Test Passage',
+                    content: content
+                };
+                
+                const response = await fetch(`${API_BASE}/api/guest/passages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-guest-id': guestId
+                    },
+                    body: JSON.stringify(passageData)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `✅ Guest passage saved successfully!<br>Passage ID: ${data.passageId}<br>Word Count: ${data.wordCount}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Save failed: ${error.message}`;
+            }
+        }
+        
+        // Test saving passage as user
+        async function testSaveUserPassage() {
+            const resultDiv = document.getElementById('save-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Saving passage as user...';
+            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    throw new Error('No auth token found. Please register a user first.');
+                }
+                
+                const content = document.getElementById('passage-content').value;
+                const passageData = {
+                    title: 'User Test Passage',
+                    content: content
+                };
+                
+                const response = await fetch(`${API_BASE}/api/user/passages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(passageData)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `✅ User passage saved successfully!<br>Passage ID: ${data.passageId}<br>Word Count: ${data.wordCount}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Save failed: ${error.message}`;
+            }
+        }
+        
+        // Test loading guest passages
+        async function testLoadGuestPassages() {
+            const resultDiv = document.getElementById('load-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Loading guest passages...';
+            
+            try {
+                const guestId = localStorage.getItem('guestId');
+                if (!guestId) {
+                    throw new Error('No guest ID found. Please create a guest session first.');
+                }
+                
+                const response = await fetch(`${API_BASE}/api/guest/passages`, {
+                    method: 'GET',
+                    headers: { 'x-guest-id': guestId }
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                let html = `✅ Loaded ${data.passages.length} guest passages:<br>`;
+                data.passages.forEach((passage, index) => {
+                    html += `${index + 1}. ${passage.title} (${passage.word_count} words)<br>`;
+                });
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Load failed: ${error.message}`;
+            }
+        }
+        
+        // Test loading user passages
+        async function testLoadUserPassages() {
+            const resultDiv = document.getElementById('load-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Loading user passages...';
+            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    throw new Error('No auth token found. Please register a user first.');
+                }
+                
+                const response = await fetch(`${API_BASE}/api/user/passages`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                let html = `✅ Loaded ${data.passages.length} user passages:<br>`;
+                data.passages.forEach((passage, index) => {
+                    html += `${index + 1}. ${passage.title} (${passage.word_count} words)<br>`;
+                });
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Load failed: ${error.message}`;
+            }
+        }
+        
+        // Initialize
+        updateStatus();
+    </script>
+</body>
+</html>

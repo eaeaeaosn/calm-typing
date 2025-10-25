@@ -133,6 +133,19 @@ const initDatabase = () => {
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (guest_id) REFERENCES guest_sessions(id)
     );
+    
+    CREATE TABLE IF NOT EXISTS user_passages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT,
+      guest_id TEXT,
+      title TEXT,
+      content TEXT NOT NULL,
+      word_count INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (guest_id) REFERENCES guest_sessions(id)
+    );
   `;
 
   if (isProduction) {
@@ -198,6 +211,21 @@ const initDatabase = () => {
       );
     `;
     
+    const createUserPassagesTable = `
+      CREATE TABLE IF NOT EXISTS user_passages (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT,
+        guest_id TEXT,
+        title TEXT,
+        content TEXT NOT NULL,
+        word_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (guest_id) REFERENCES guest_sessions(id)
+      );
+    `;
+    
     // Create tables sequentially
     db.exec(createUsersTable, (err) => {
       if (err) {
@@ -234,35 +262,43 @@ const initDatabase = () => {
               }
               console.log('User settings table created');
               
-              // Add missing data column to guest_sessions if it doesn't exist
-              db.exec('ALTER TABLE guest_sessions ADD COLUMN IF NOT EXISTS data TEXT', (err) => {
+              db.exec(createUserPassagesTable, (err) => {
                 if (err) {
-                  console.error('Error adding data column to guest_sessions:', err);
-                } else {
-                  console.log('Data column added to guest_sessions table');
+                  console.error('Error creating user_passages table:', err);
+                  return;
                 }
+                console.log('User passages table created');
                 
-                // Add unique constraint to user_data safely
-                const addConstraintQuery = `
-                  DO $$
-                  BEGIN
-                    IF NOT EXISTS (
-                      SELECT 1 FROM pg_constraint
-                      WHERE conname = 'user_data_user_id_data_type_key'
-                    ) THEN
-                      ALTER TABLE user_data
-                      ADD CONSTRAINT user_data_user_id_data_type_key UNIQUE (user_id, data_type);
-                    END IF;
-                  END $$;
-                `;
-                
-                db.exec(addConstraintQuery, (err) => {
+                // Add missing data column to guest_sessions if it doesn't exist
+                db.exec('ALTER TABLE guest_sessions ADD COLUMN IF NOT EXISTS data TEXT', (err) => {
                   if (err) {
-                    console.error('Error adding unique constraint to user_data:', err);
+                    console.error('Error adding data column to guest_sessions:', err);
                   } else {
-                    console.log('Unique constraint checked/added to user_data table');
+                    console.log('Data column added to guest_sessions table');
                   }
-                  console.log('PostgreSQL database initialized successfully');
+                  
+                  // Add unique constraint to user_data safely
+                  const addConstraintQuery = `
+                    DO $$
+                    BEGIN
+                      IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conname = 'user_data_user_id_data_type_key'
+                      ) THEN
+                        ALTER TABLE user_data
+                        ADD CONSTRAINT user_data_user_id_data_type_key UNIQUE (user_id, data_type);
+                      END IF;
+                    END $$;
+                  `;
+                  
+                  db.exec(addConstraintQuery, (err) => {
+                    if (err) {
+                      console.error('Error adding unique constraint to user_data:', err);
+                    } else {
+                      console.log('Unique constraint checked/added to user_data table');
+                    }
+                    console.log('PostgreSQL database initialized successfully');
+                  });
                 });
               });
             });

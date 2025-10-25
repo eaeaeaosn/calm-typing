@@ -1305,6 +1305,29 @@
                 <button id="audio-remove-btn" class="history-btn clear" style="flex:1;">Remove</button>
             </div>
             <div class="info" id="audio-current-label">No music assigned for current background.</div>
+            
+            <div class="divider"></div>
+            <h3>My Passages</h3>
+            <div class="section-label">Manage your saved passages:</div>
+            <button id="view-passages-btn" class="history-btn" style="width: 100%; margin-bottom: 8px;">View My Passages</button>
+            <button id="sync-passages-btn" class="history-btn" style="width: 100%; background: #4CAF50; color: white;">Sync with Cloud</button>
+        </div>
+    </div>
+    
+    <!-- Passages Management Modal -->
+    <div id="passages-modal" class="auth-modal" style="display: none;">
+        <div class="auth-container" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+            <div class="logo">My Passages</div>
+            <div class="subtitle">View and manage your saved passages</div>
+            
+            <div id="passages-list" style="margin: 20px 0;">
+                <!-- Passages will be loaded here -->
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="close-passages-btn" class="auth-button" style="flex: 1;">Close</button>
+                <button id="refresh-passages-btn" class="auth-button" style="flex: 1; background: #4CAF50;">Refresh</button>
+            </div>
         </div>
     </div>
     

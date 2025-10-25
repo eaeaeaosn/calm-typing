@@ -417,6 +417,226 @@ app.post('/api/user/data/:dataType', authenticateToken, (req, res) => {
   });
 });
 
+// User passages endpoints
+// Get all passages for a user
+app.get('/api/user/passages', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT id, title, content, word_count, created_at, updated_at FROM user_passages WHERE user_id = $1 ORDER BY updated_at DESC'
+    : 'SELECT id, title, content, word_count, created_at, updated_at FROM user_passages WHERE user_id = ? ORDER BY updated_at DESC';
+  
+  db.all(selectQuery, [userId], (err, rows) => {
+    if (err) {
+      console.error('User passages retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    res.json({ passages: rows || [] });
+  });
+});
+
+// Get a specific passage
+app.get('/api/user/passages/:passageId', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { passageId } = req.params;
+  
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT id, title, content, word_count, created_at, updated_at FROM user_passages WHERE id = $1 AND user_id = $2'
+    : 'SELECT id, title, content, word_count, created_at, updated_at FROM user_passages WHERE id = ? AND user_id = ?';
+  
+  db.get(selectQuery, [passageId, userId], (err, row) => {
+    if (err) {
+      console.error('User passage retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!row) {
+      return res.status(404).json({ error: 'Passage not found' });
+    }
+    
+    res.json({ passage: row });
+  });
+});
+
+// Save a new passage
+app.post('/api/user/passages', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { title, content } = req.body;
+  
+  if (!content || content.trim().length === 0) {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+  
+  const wordCount = content.trim().split(/\s+/).length;
+  const passageTitle = title || `Passage ${new Date().toLocaleDateString()}`;
+  
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO user_passages (user_id, title, content, word_count) VALUES ($1, $2, $3, $4) RETURNING id, created_at, updated_at'
+    : 'INSERT INTO user_passages (user_id, title, content, word_count) VALUES (?, ?, ?, ?)';
+  
+  const insertParams = [userId, passageTitle, content, wordCount];
+  
+  if (process.env.NODE_ENV === 'production') {
+    // PostgreSQL - use query instead of run for RETURNING clause
+    db.all(insertQuery, insertParams, (err, rows) => {
+      if (err) {
+        console.error('User passage save error:', err);
+        return res.status(500).json({ error: 'Failed to save passage' });
+      }
+      
+      const passageId = rows && rows[0] ? rows[0].id : null;
+      res.json({ 
+        message: 'Passage saved successfully',
+        passageId: passageId,
+        wordCount: wordCount
+      });
+    });
+  } else {
+    // SQLite - use run method
+    db.run(insertQuery, insertParams, function(err) {
+      if (err) {
+        console.error('User passage save error:', err);
+        return res.status(500).json({ error: 'Failed to save passage' });
+      }
+      
+      res.json({ 
+        message: 'Passage saved successfully',
+        passageId: this.lastID,
+        wordCount: wordCount
+      });
+    });
+  }
+});
+
+// Update an existing passage
+app.put('/api/user/passages/:passageId', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { passageId } = req.params;
+  const { title, content } = req.body;
+  
+  if (!content || content.trim().length === 0) {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+  
+  const wordCount = content.trim().split(/\s+/).length;
+  const passageTitle = title || `Passage ${new Date().toLocaleDateString()}`;
+  
+  const updateQuery = process.env.NODE_ENV === 'production' 
+    ? 'UPDATE user_passages SET title = $1, content = $2, word_count = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND user_id = $5'
+    : 'UPDATE user_passages SET title = ?, content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?';
+  
+  const updateParams = [passageTitle, content, wordCount, passageId, userId];
+  
+  db.run(updateQuery, updateParams, function(err) {
+    if (err) {
+      console.error('User passage update error:', err);
+      return res.status(500).json({ error: 'Failed to update passage' });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Passage not found' });
+    }
+    
+    res.json({ 
+      message: 'Passage updated successfully',
+      wordCount: wordCount
+    });
+  });
+});
+
+// Delete a passage
+app.delete('/api/user/passages/:passageId', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { passageId } = req.params;
+  
+  const deleteQuery = process.env.NODE_ENV === 'production' 
+    ? 'DELETE FROM user_passages WHERE id = $1 AND user_id = $2'
+    : 'DELETE FROM user_passages WHERE id = ? AND user_id = ?';
+  
+  db.run(deleteQuery, [passageId, userId], function(err) {
+    if (err) {
+      console.error('User passage deletion error:', err);
+      return res.status(500).json({ error: 'Failed to delete passage' });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Passage not found' });
+    }
+    
+    res.json({ message: 'Passage deleted successfully' });
+  });
+});
+
+// Guest passages endpoints
+// Get all passages for a guest
+app.get('/api/guest/passages', authenticateGuest, (req, res) => {
+  const guestId = req.guestId;
+  
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT id, title, content, word_count, created_at, updated_at FROM user_passages WHERE guest_id = $1 ORDER BY updated_at DESC'
+    : 'SELECT id, title, content, word_count, created_at, updated_at FROM user_passages WHERE guest_id = ? ORDER BY updated_at DESC';
+  
+  db.all(selectQuery, [guestId], (err, rows) => {
+    if (err) {
+      console.error('Guest passages retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    res.json({ passages: rows || [] });
+  });
+});
+
+// Save a new passage for guest
+app.post('/api/guest/passages', authenticateGuest, (req, res) => {
+  const guestId = req.guestId;
+  const { title, content } = req.body;
+  
+  if (!content || content.trim().length === 0) {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+  
+  const wordCount = content.trim().split(/\s+/).length;
+  const passageTitle = title || `Passage ${new Date().toLocaleDateString()}`;
+  
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO user_passages (guest_id, title, content, word_count) VALUES ($1, $2, $3, $4) RETURNING id, created_at, updated_at'
+    : 'INSERT INTO user_passages (guest_id, title, content, word_count) VALUES (?, ?, ?, ?)';
+  
+  const insertParams = [guestId, passageTitle, content, wordCount];
+  
+  if (process.env.NODE_ENV === 'production') {
+    // PostgreSQL - use query instead of run for RETURNING clause
+    db.all(insertQuery, insertParams, (err, rows) => {
+      if (err) {
+        console.error('Guest passage save error:', err);
+        return res.status(500).json({ error: 'Failed to save passage' });
+      }
+      
+      const passageId = rows && rows[0] ? rows[0].id : null;
+      res.json({ 
+        message: 'Passage saved successfully',
+        passageId: passageId,
+        wordCount: wordCount
+      });
+    });
+  } else {
+    // SQLite - use run method
+    db.run(insertQuery, insertParams, function(err) {
+      if (err) {
+        console.error('Guest passage save error:', err);
+        return res.status(500).json({ error: 'Failed to save passage' });
+      }
+      
+      res.json({ 
+        message: 'Passage saved successfully',
+        passageId: this.lastID,
+        wordCount: wordCount
+      });
+    });
+  }
+});
+
 // Guest data endpoints
 app.get('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
   const { dataType } = req.params;

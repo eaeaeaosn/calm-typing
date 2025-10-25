@@ -28,6 +28,7 @@ class CalmTyping {
     init() {
         this.setupEventListeners();
         this.startBackgroundMusic();
+        this.initializeCloudSync();
         // Focus management: prefer input if present, otherwise focus body
         if (this.typingInput) {
             this.typingInput.focus();
@@ -379,6 +380,9 @@ class CalmTyping {
             if (fullSentence.trim()) {
                 this.typedSentences.push(fullSentence);
                 this.animateSentence(fullSentence);
+                
+                // Save passage to cloud storage
+                await this.savePassageToCloud(fullSentence);
             }
             
             // Clear everything
@@ -455,12 +459,479 @@ class CalmTyping {
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.1);
     }
+    
+    // Cloud storage methods for passages
+    async savePassageToCloud(content) {
+        try {
+            // Check if user is authenticated or is a guest
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            
+            if (!authToken && !guestId) {
+                console.log('No authentication found, skipping cloud save');
+                return;
+            }
+            
+            const title = `Passage ${new Date().toLocaleDateString()}`;
+            const wordCount = content.trim().split(/\s+/).length;
+            
+            const endpoint = authToken ? '/api/user/passages' : '/api/guest/passages';
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            } else {
+                headers['x-guest-id'] = guestId;
+            }
+            
+            const response = await fetch(`${window.location.origin}${endpoint}`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    title: title,
+                    content: content
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Passage saved to cloud:', result);
+                this.showCloudSaveNotification('Passage saved to cloud!');
+                
+                // Also save locally for offline access
+                this.savePassageLocally(content);
+            } else {
+                console.error('Failed to save passage to cloud:', response.statusText);
+                // Save locally as fallback
+                this.savePassageLocally(content);
+            }
+        } catch (error) {
+            console.error('Error saving passage to cloud:', error);
+        }
+    }
+    
+    async loadPassagesFromCloud() {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            
+            if (!authToken && !guestId) {
+                console.log('No authentication found, skipping cloud load');
+                return [];
+            }
+            
+            const endpoint = authToken ? '/api/user/passages' : '/api/guest/passages';
+            const headers = {};
+            
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            } else {
+                headers['x-guest-id'] = guestId;
+            }
+            
+            const response = await fetch(`${window.location.origin}${endpoint}`, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                return result.passages || [];
+            } else {
+                console.error('Failed to load passages from cloud:', response.statusText);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error loading passages from cloud:', error);
+            return [];
+        }
+    }
+    
+    showCloudSaveNotification(message) {
+        // Create a temporary notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10000;
+            animation: slideDown 0.3s ease;
+        `;
+        notification.textContent = message;
+        
+        // Add animation keyframes
+        if (!document.getElementById('notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-styles';
+            style.textContent = `
+                @keyframes slideDown {
+                    from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+                    to { transform: translateX(-50%) translateY(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+    
+    // Cloud sync initialization
+    initializeCloudSync() {
+        // Set up periodic sync every 5 minutes
+        this.syncInterval = setInterval(() => {
+            this.performBackgroundSync();
+        }, 5 * 60 * 1000); // 5 minutes
+        
+        // Sync on page load
+        this.performBackgroundSync();
+        
+        // Sync when user becomes active (after being away)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                this.performBackgroundSync();
+            }
+        });
+        
+        // Sync when network comes back online
+        window.addEventListener('online', () => {
+            this.performBackgroundSync();
+        });
+    }
+    
+    async performBackgroundSync() {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            
+            if (!authToken && !guestId) {
+                return; // No authentication, skip sync
+            }
+            
+            // Load passages from cloud
+            const cloudPassages = await this.loadPassagesFromCloud();
+            
+            // Load local passages
+            const localPassages = this.getLocalPassages();
+            
+            // Sync logic: merge local and cloud passages
+            await this.syncPassages(localPassages, cloudPassages);
+            
+        } catch (error) {
+            console.log('Background sync failed:', error);
+        }
+    }
+    
+    getLocalPassages() {
+        try {
+            const saved = localStorage.getItem('localPassages');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.error('Error loading local passages:', error);
+            return [];
+        }
+    }
+    
+    saveLocalPassages(passages) {
+        try {
+            localStorage.setItem('localPassages', JSON.stringify(passages));
+        } catch (error) {
+            console.error('Error saving local passages:', error);
+        }
+    }
+    
+    savePassageLocally(content) {
+        try {
+            const localPassages = this.getLocalPassages();
+            const newPassage = {
+                content: content,
+                timestamp: new Date().toISOString(),
+                title: `Passage ${new Date().toLocaleDateString()}`
+            };
+            localPassages.push(newPassage);
+            this.saveLocalPassages(localPassages);
+        } catch (error) {
+            console.error('Error saving passage locally:', error);
+        }
+    }
+    
+    async syncPassages(localPassages, cloudPassages) {
+        const mergedPassages = [...cloudPassages];
+        
+        // Add local passages that don't exist in cloud
+        for (const localPassage of localPassages) {
+            const existsInCloud = cloudPassages.some(cloud => 
+                cloud.content === localPassage.content && 
+                Math.abs(new Date(cloud.created_at) - new Date(localPassage.timestamp)) < 60000 // Within 1 minute
+            );
+            
+            if (!existsInCloud) {
+                // Save local passage to cloud
+                await this.savePassageToCloud(localPassage.content);
+            }
+        }
+        
+        // Update local storage with cloud passages
+        this.saveLocalPassages(cloudPassages);
+        
+        console.log('Passages synced successfully');
+    }
+    
+    // Cleanup method
+    destroy() {
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+        }
+    }
 }
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new CalmTyping();
+    const calmTyping = new CalmTyping();
+    
+    // Initialize passages management
+    initializePassagesManagement(calmTyping);
 });
+
+// Passages management functionality
+function initializePassagesManagement(calmTyping) {
+    const viewPassagesBtn = document.getElementById('view-passages-btn');
+    const syncPassagesBtn = document.getElementById('sync-passages-btn');
+    const passagesModal = document.getElementById('passages-modal');
+    const closePassagesBtn = document.getElementById('close-passages-btn');
+    const refreshPassagesBtn = document.getElementById('refresh-passages-btn');
+    const passagesList = document.getElementById('passages-list');
+    
+    // View passages button
+    if (viewPassagesBtn) {
+        viewPassagesBtn.addEventListener('click', async () => {
+            passagesModal.style.display = 'flex';
+            await loadPassagesList();
+        });
+    }
+    
+    // Sync passages button
+    if (syncPassagesBtn) {
+        syncPassagesBtn.addEventListener('click', async () => {
+            try {
+                const passages = await calmTyping.loadPassagesFromCloud();
+                calmTyping.showCloudSaveNotification(`Synced ${passages.length} passages from cloud!`);
+            } catch (error) {
+                console.error('Error syncing passages:', error);
+                calmTyping.showCloudSaveNotification('Error syncing passages');
+            }
+        });
+    }
+    
+    // Close passages modal
+    if (closePassagesBtn) {
+        closePassagesBtn.addEventListener('click', () => {
+            passagesModal.style.display = 'none';
+        });
+    }
+    
+    // Refresh passages button
+    if (refreshPassagesBtn) {
+        refreshPassagesBtn.addEventListener('click', async () => {
+            await loadPassagesList();
+        });
+    }
+    
+    // Close modal when clicking outside
+    if (passagesModal) {
+        passagesModal.addEventListener('click', (e) => {
+            if (e.target === passagesModal) {
+                passagesModal.style.display = 'none';
+            }
+        });
+    }
+    
+    async function loadPassagesList() {
+        try {
+            const passages = await calmTyping.loadPassagesFromCloud();
+            displayPassages(passages);
+        } catch (error) {
+            console.error('Error loading passages:', error);
+            passagesList.innerHTML = '<p style="color: #666; text-align: center;">Error loading passages. Please try again.</p>';
+        }
+    }
+    
+    function displayPassages(passages) {
+        if (!passages || passages.length === 0) {
+            passagesList.innerHTML = '<p style="color: #666; text-align: center;">No passages saved yet. Start typing to create your first passage!</p>';
+            return;
+        }
+        
+        passagesList.innerHTML = '';
+        
+        passages.forEach((passage, index) => {
+            const passageElement = document.createElement('div');
+            passageElement.style.cssText = `
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 15px;
+                margin-bottom: 15px;
+                background: #f9f9f9;
+            `;
+            
+            const title = passage.title || `Passage ${index + 1}`;
+            const date = new Date(passage.created_at).toLocaleDateString();
+            const wordCount = passage.word_count || 0;
+            
+            passageElement.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #333; font-size: 16px;">${title}</h4>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="editPassage(${passage.id})" style="background: #2196F3; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Edit</button>
+                        <button onclick="deletePassage(${passage.id})" style="background: #f44336; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>
+                    </div>
+                </div>
+                <div style="color: #666; font-size: 12px; margin-bottom: 8px;">
+                    ${date} • ${wordCount} words
+                </div>
+                <div style="color: #555; line-height: 1.4; max-height: 100px; overflow-y: auto;">
+                    ${passage.content}
+                </div>
+            `;
+            
+            passagesList.appendChild(passageElement);
+        });
+    }
+    
+    // Global functions for passage actions
+    window.editPassage = async function(passageId) {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            
+            if (!authToken && !guestId) {
+                alert('Please log in to edit passages');
+                return;
+            }
+            
+            const endpoint = authToken ? `/api/user/passages/${passageId}` : `/api/guest/passages/${passageId}`;
+            const headers = {};
+            
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            } else {
+                headers['x-guest-id'] = guestId;
+            }
+            
+            const response = await fetch(`${window.location.origin}${endpoint}`, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                const newTitle = prompt('Enter new title:', result.passage.title);
+                if (newTitle !== null) {
+                    const newContent = prompt('Edit content:', result.passage.content);
+                    if (newContent !== null) {
+                        await updatePassage(passageId, newTitle, newContent);
+                    }
+                }
+            } else {
+                alert('Error loading passage for editing');
+            }
+        } catch (error) {
+            console.error('Error editing passage:', error);
+            alert('Error editing passage');
+        }
+    };
+    
+    window.deletePassage = async function(passageId) {
+        if (!confirm('Are you sure you want to delete this passage?')) {
+            return;
+        }
+        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            
+            if (!authToken && !guestId) {
+                alert('Please log in to delete passages');
+                return;
+            }
+            
+            const endpoint = authToken ? `/api/user/passages/${passageId}` : `/api/guest/passages/${passageId}`;
+            const headers = {};
+            
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            } else {
+                headers['x-guest-id'] = guestId;
+            }
+            
+            const response = await fetch(`${window.location.origin}${endpoint}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            
+            if (response.ok) {
+                await loadPassagesList(); // Refresh the list
+                calmTyping.showCloudSaveNotification('Passage deleted successfully');
+            } else {
+                alert('Error deleting passage');
+            }
+        } catch (error) {
+            console.error('Error deleting passage:', error);
+            alert('Error deleting passage');
+        }
+    };
+    
+    async function updatePassage(passageId, title, content) {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            
+            const endpoint = authToken ? `/api/user/passages/${passageId}` : `/api/guest/passages/${passageId}`;
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            } else {
+                headers['x-guest-id'] = guestId;
+            }
+            
+            const response = await fetch(`${window.location.origin}${endpoint}`, {
+                method: 'PUT',
+                headers: headers,
+                body: JSON.stringify({
+                    title: title,
+                    content: content
+                })
+            });
+            
+            if (response.ok) {
+                await loadPassagesList(); // Refresh the list
+                calmTyping.showCloudSaveNotification('Passage updated successfully');
+            } else {
+                alert('Error updating passage');
+            }
+        } catch (error) {
+            console.error('Error updating passage:', error);
+            alert('Error updating passage');
+        }
+    }
+}
 
 // Add some calming particle effects
 class OceanParticles {
