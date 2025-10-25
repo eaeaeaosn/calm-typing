@@ -151,16 +151,50 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Helper function to format timestamps to St. Louis timezone
+const formatStLouisTime = (dateString) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+};
+
 // Admin endpoint to view users (for development/testing)
 app.get('/api/admin/users', (req, res) => {
   db.all('SELECT id, username, email, is_guest, created_at, last_login FROM users ORDER BY created_at DESC', (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Format timestamps to St. Louis timezone
+    const formattedRows = rows.map(row => ({
+      ...row,
+      created_at: formatStLouisTime(row.created_at),
+      last_login: formatStLouisTime(row.last_login)
+    }));
+    
     res.json({ 
-      users: rows,
+      users: formattedRows,
       total: rows.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }),
+      timezone: 'America/Chicago (St. Louis)'
     });
   });
 });
@@ -171,10 +205,28 @@ app.get('/api/admin/guests', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Format timestamps to St. Louis timezone
+    const formattedRows = rows.map(row => ({
+      ...row,
+      created_at: formatStLouisTime(row.created_at),
+      last_activity: formatStLouisTime(row.last_activity)
+    }));
+    
     res.json({ 
-      guests: rows,
+      guests: formattedRows,
       total: rows.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }),
+      timezone: 'America/Chicago (St. Louis)'
     });
   });
 });
