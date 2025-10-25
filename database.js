@@ -158,6 +158,18 @@ const initDatabase = () => {
       );
     `;
     
+    const createUserDataTable = `
+      CREATE TABLE IF NOT EXISTS user_data (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT,
+        data_type TEXT NOT NULL,
+        data_content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+    `;
+    
     const createUserSettingsTable = `
       CREATE TABLE IF NOT EXISTS user_settings (
         id SERIAL PRIMARY KEY,
@@ -193,12 +205,20 @@ const initDatabase = () => {
           }
           console.log('Typing history table created');
           
-          db.exec(createUserSettingsTable, (err) => {
+          db.exec(createUserDataTable, (err) => {
             if (err) {
-              console.error('Error creating user_settings table:', err);
+              console.error('Error creating user_data table:', err);
               return;
             }
-            console.log('PostgreSQL database initialized successfully');
+            console.log('User data table created');
+            
+            db.exec(createUserSettingsTable, (err) => {
+              if (err) {
+                console.error('Error creating user_settings table:', err);
+                return;
+              }
+              console.log('PostgreSQL database initialized successfully');
+            });
           });
         });
       });
