@@ -149,6 +149,7 @@
         #fish-toggle:hover {
             background: rgba(180, 180, 180, 0.95);
             transform: scale(1.05);
+            
         }
 
         #controls.collapsed ~ #fish-toggle {
@@ -161,6 +162,31 @@
             color: #fff;
             transform: translateY(-1px) scale(1.03);
         }
+
+        /* Audio control */
+        #audio-control {
+            position: fixed;
+            top: 20px;
+            right: 490px;
+            width: 50px;
+            height: 50px;
+            background: rgba(200, 200, 200, 0.95);
+            border: none;
+            border-radius: 12px;
+            color: #333;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-size: 20px;
+        }
+
+        #audio-control:hover { background: rgba(180,180,180,0.95); transform: scale(1.05); }
+        #controls.collapsed ~ #audio-control { right: 260px; }
+        #audio-control.active { background: rgba(120,160,240,0.95); color: #fff; transform: translateY(-1px) scale(1.03); }
         
         #volume-slider-container {
             position: fixed;
@@ -189,6 +215,7 @@
         
         #volume-slider-vertical {
             writing-mode: bt-lr;
+            appearance: slider-vertical;
             -webkit-appearance: slider-vertical;
             width: 8px;
             height: 100%;
@@ -923,6 +950,8 @@
     </button>
 
     <button id="fish-toggle" title="Toggle Fish">🐟</button>
+    <button id="audio-control" title="Toggle Music">♪</button>
+    <audio id="bg-audio" preload="auto" loop></audio>
     
     <div id="volume-slider-container">
         <input type="range" id="volume-slider-vertical" min="0" max="100" value="50" orient="vertical">
@@ -960,6 +989,25 @@
             <div class="section-label">Or Upload Custom Font:</div>
             <input type="file" id="font-upload" accept=".ttf,.otf" />
             <div class="info">Upload .ttf or .otf file</div>
+            
+            <div class="divider"></div>
+            <h3>Background Music</h3>
+            <div class="section-label">Assign music to a background:</div>
+            <select id="audio-bg-select">
+                <option value="none">None</option>
+                <option value="forest">Forest</option>
+                <option value="ocean">Ocean</option>
+                <option value="mountain">Mountain</option>
+            </select>
+            <div style="margin-top:8px"></div>
+            <input type="file" id="audio-upload-file" accept="audio/*" />
+            <div style="margin:8px 0;">or</div>
+            <input type="url" id="audio-upload-url" placeholder="Paste remote mp3 URL (https://...)" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="audio-assign-btn" class="history-btn" style="flex:1; background:#333; color:#fff;">Assign</button>
+                <button id="audio-remove-btn" class="history-btn clear" style="flex:1;">Remove</button>
+            </div>
+            <div class="info" id="audio-current-label">No music assigned for current background.</div>
         </div>
     </div>
     
@@ -1010,6 +1058,8 @@
         const volumeSlider = document.getElementById('volume-slider-vertical');
         const volumeValue = document.getElementById('volume-value');
     const fishToggle = document.getElementById('fish-toggle');
+    const audioControl = document.getElementById('audio-control');
+    const bgAudio = document.getElementById('bg-audio');
         
         let customFontFamily = 'Courier New, monospace';
         let textColor = '#000000';
@@ -1339,7 +1389,7 @@
                 backgroundToggle.classList.remove('rotating');
             }, 500);
             
-            cycleBackground();
+            cycleBackground_withAudio();
         });
         
         // Volume control toggle
@@ -1370,6 +1420,205 @@
 
         // Initialize fish toggle UI based on default
         updateFishToggleUI();
+        
+        // Audio system: per-background tracks
+        let audioTracks = {}; // persistent tracks saved in localStorage (only remote URLs or path strings)
+        const uploadedTracks = {}; // session-only object URLs for uploaded local files
+
+        function loadAudioTracks() {
+            try {
+                const raw = localStorage.getItem('bgAudioTracks');
+                audioTracks = raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                audioTracks = {};
+            }
+        }
+
+        function saveAudioTracks() {
+            try {
+                localStorage.setItem('bgAudioTracks', JSON.stringify(audioTracks));
+            } catch (e) {
+                console.warn('Failed to persist audio tracks', e);
+            }
+        }
+
+        function getTrackForBackground(name) {
+            if (uploadedTracks[name]) return uploadedTracks[name];
+            return audioTracks[name] || null;
+        }
+
+        function applyBackgroundAudio() {
+            const bg = backgrounds[currentBackground].name;
+            const track = getTrackForBackground(bg);
+            if (track && track.src) {
+                if (bgAudio.src !== track.src) {
+                    bgAudio.src = track.src;
+                }
+                bgAudio.volume = currentVolume;
+                bgAudio.play().catch(()=>{
+                    // Autoplay may be blocked; update UI accordingly
+                    audioControl.classList.remove('active');
+                });
+                audioControl.classList.add('active');
+                audioControl.title = 'Pause Music';
+            } else {
+                bgAudio.pause();
+                bgAudio.removeAttribute('src');
+                bgAudio.load();
+                audioControl.classList.remove('active');
+                audioControl.title = 'Play Music';
+            }
+        }
+
+        // UI elements for audio mapping
+        const audioBgSelect = document.getElementById('audio-bg-select');
+        const audioUploadFile = document.getElementById('audio-upload-file');
+        const audioUploadUrl = document.getElementById('audio-upload-url');
+        const audioAssignBtn = document.getElementById('audio-assign-btn');
+        const audioRemoveBtn = document.getElementById('audio-remove-btn');
+        const audioCurrentLabel = document.getElementById('audio-current-label');
+
+        function updateAudioCurrentLabel() {
+            const bg = backgrounds[currentBackground].name;
+            const t = getTrackForBackground(bg);
+            if (t && t.label) {
+                audioCurrentLabel.textContent = `Assigned: ${t.label}`;
+            } else if (t && t.src) {
+                audioCurrentLabel.textContent = `Assigned: ${t.src}`;
+            } else {
+                audioCurrentLabel.textContent = 'No music assigned for current background.';
+            }
+        }
+
+        // Assign button handler
+        if (audioAssignBtn) {
+            audioAssignBtn.addEventListener('click', function() {
+                const bg = audioBgSelect.value || 'none';
+                // prefer file upload
+                const file = audioUploadFile.files && audioUploadFile.files[0];
+                const url = (audioUploadUrl.value || '').trim();
+                if (file) {
+                    const obj = URL.createObjectURL(file);
+                    // revoke previous if existed
+                    if (uploadedTracks[bg] && uploadedTracks[bg].isObject) {
+                        try { URL.revokeObjectURL(uploadedTracks[bg].src); } catch(e){}
+                    }
+                    uploadedTracks[bg] = { src: obj, label: file.name, isObject: true };
+                    // If assigned to currently active background, apply immediately
+                    if (backgrounds[currentBackground].name === bg) applyBackgroundAudio();
+                    updateAudioCurrentLabel();
+                } else if (url) {
+                    // simple validation
+                    try {
+                        const parsed = new URL(url);
+                        audioTracks[bg] = { src: parsed.href, label: parsed.href };
+                        saveAudioTracks();
+                        if (backgrounds[currentBackground].name === bg) applyBackgroundAudio();
+                        updateAudioCurrentLabel();
+                    } catch (e) {
+                        alert('Please enter a valid URL (must start with http/https).');
+                    }
+                } else {
+                    alert('Please choose an audio file or enter a remote URL to assign.');
+                }
+            });
+        }
+
+        // Remove mapping
+        if (audioRemoveBtn) {
+            audioRemoveBtn.addEventListener('click', function() {
+                const bg = audioBgSelect.value || 'none';
+                if (uploadedTracks[bg] && uploadedTracks[bg].isObject) {
+                    try { URL.revokeObjectURL(uploadedTracks[bg].src); } catch(e){}
+                    delete uploadedTracks[bg];
+                }
+                if (audioTracks[bg]) {
+                    delete audioTracks[bg];
+                    saveAudioTracks();
+                }
+                if (backgrounds[currentBackground].name === bg) applyBackgroundAudio();
+                updateAudioCurrentLabel();
+            });
+        }
+
+        // When background changes update the UI label
+        const _origApplyBg = applyBackgroundAudio;
+        function applyBackgroundAudio_andUpdateUI() {
+            _origApplyBg();
+            updateAudioCurrentLabel();
+        }
+        // Replace calls to applyBackgroundAudio where needed
+        // Initialize audio tracks and UI
+        loadAudioTracks();
+
+        // Provide sensible default tracks from the local `Audios/` folder if the user hasn't assigned any
+        (function ensureDefaultLocalTracks(){
+            const defaults = {
+                forest: {
+                    src: 'Audios/15-minutes-of-rain-sound-for-relaxation-and-sleep-study-312863.mp3',
+                    label: 'Rain - 15 minutes'
+                },
+                ocean: {
+                    src: 'Audios/ocean-waves-376898.mp3',
+                    label: 'Ocean Waves'
+                },
+                mountain: {
+                    src: 'Audios/the-sound-of-a-mountain-stream-_nature-sound-201930.mp3',
+                    label: 'Mountain Stream'
+                }
+            };
+
+            let changed = false;
+            for (const k of Object.keys(defaults)) {
+                // don't overwrite any user-mapped remote URL or uploaded session file
+                if (!audioTracks[k] && !uploadedTracks[k]) {
+                    audioTracks[k] = defaults[k];
+                    changed = true;
+                }
+            }
+            if (changed) saveAudioTracks();
+        })();
+
+        updateAudioCurrentLabel();
+        // Ensure audio follows initial background (none)
+        applyBackgroundAudio();
+
+        // Wire audio control button
+        if (audioControl) {
+            audioControl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (!bgAudio.src) {
+                    // try to apply current background's audio
+                    applyBackgroundAudio();
+                    return;
+                }
+                if (bgAudio.paused) {
+                    bgAudio.play().then(()=>{
+                        audioControl.classList.add('active');
+                        audioControl.title = 'Pause Music';
+                    }).catch(()=>{});
+                } else {
+                    bgAudio.pause();
+                    audioControl.classList.remove('active');
+                    audioControl.title = 'Play Music';
+                }
+            });
+        }
+
+        // Volume should control audio element too
+        volumeSlider.addEventListener('input', function() {
+            currentVolume = this.value / 100;
+            volumeValue.textContent = this.value + '%';
+            if (bgAudio) bgAudio.volume = currentVolume;
+        });
+
+        // Update cycleBackground to also change audio
+        const _origCycleBackground = cycleBackground;
+        function cycleBackground_withAudio() {
+            _origCycleBackground();
+            applyBackgroundAudio();
+        }
+        // Replace listener used earlier by direct function reference; backgroundToggle uses cycleBackground call, so update that call site instead
         
         // Close volume slider when clicking outside
         document.addEventListener('click', function(e) {
