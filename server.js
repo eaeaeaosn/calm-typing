@@ -95,7 +95,11 @@ const authenticateGuest = (req, res, next) => {
   }
   
   // Verify guest session exists
-  db.get('SELECT * FROM guest_sessions WHERE id = ?', [guestId], (err, row) => {
+  const guestCheckQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT * FROM guest_sessions WHERE id = $1'
+    : 'SELECT * FROM guest_sessions WHERE id = ?';
+  
+  db.get(guestCheckQuery, [guestId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -359,13 +363,15 @@ app.get('/api/user/data/:dataType', authenticateToken, (req, res) => {
   const { dataType } = req.params;
   const userId = req.user.userId;
   
-  db.get(
-    'SELECT data_content FROM user_data WHERE user_id = ? AND data_type = ? ORDER BY updated_at DESC LIMIT 1',
-    [userId, dataType],
-    (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT data_content FROM user_data WHERE user_id = $1 AND data_type = $2 ORDER BY updated_at DESC LIMIT 1'
+    : 'SELECT data_content FROM user_data WHERE user_id = ? AND data_type = ? ORDER BY updated_at DESC LIMIT 1';
+  
+  db.get(selectQuery, [userId, dataType], (err, row) => {
+    if (err) {
+      console.error('User data retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
       
       if (row) {
         res.json({ data: JSON.parse(row.data_content) });
@@ -401,7 +407,11 @@ app.get('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
   const { dataType } = req.params;
   const guestId = req.guestId;
   
-  db.get('SELECT data FROM guest_sessions WHERE id = ?', [guestId], (err, row) => {
+  const guestDataQuery = process.env.NODE_ENV === 'production' 
+  ? 'SELECT data FROM guest_sessions WHERE id = $1'
+  : 'SELECT data FROM guest_sessions WHERE id = ?';
+
+db.get(guestDataQuery, [guestId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -419,7 +429,11 @@ app.post('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
   const { dataType } = req.params;
   const guestId = req.guestId;
   
-  db.get('SELECT data FROM guest_sessions WHERE id = ?', [guestId], (err, row) => {
+  const guestDataQuery = process.env.NODE_ENV === 'production' 
+  ? 'SELECT data FROM guest_sessions WHERE id = $1'
+  : 'SELECT data FROM guest_sessions WHERE id = ?';
+
+db.get(guestDataQuery, [guestId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -431,10 +445,11 @@ app.post('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
     
     guestData[dataType] = req.body;
     
-    db.run(
-      'UPDATE guest_sessions SET data = ?, last_activity = CURRENT_TIMESTAMP WHERE id = ?',
-      [JSON.stringify(guestData), guestId],
-      function(err) {
+    const updateQuery = process.env.NODE_ENV === 'production' 
+      ? 'UPDATE guest_sessions SET data = $1, last_activity = CURRENT_TIMESTAMP WHERE id = $2'
+      : 'UPDATE guest_sessions SET data = ?, last_activity = CURRENT_TIMESTAMP WHERE id = ?';
+    
+    db.run(updateQuery, [JSON.stringify(guestData), guestId], function(err) {
         if (err) {
           return res.status(500).json({ error: 'Failed to save guest data' });
         }
