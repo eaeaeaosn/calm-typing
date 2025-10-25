@@ -1037,6 +1037,16 @@
             temperature: 0.7
         };
         
+        // Server API Configuration
+        const API_BASE = window.location.origin + '/api';
+        
+        // Authentication state
+        let isAuthenticated = false;
+        let isGuest = false;
+        let authToken = null;
+        let guestId = null;
+        let currentUser = null;
+        
         const container = document.getElementById('canvas-container');
         const fontUpload = document.getElementById('font-upload');
         const fontSelect = document.getElementById('font-select');
@@ -1098,8 +1108,55 @@
             return '<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 6l-3 4.5L8 6 2 19h20L14 6z" fill="currentColor"/></svg>';
         }
         
-        // Load history from localStorage
-        function loadHistory() {
+        // Load history from server or localStorage
+        async function loadHistory() {
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                const saved = localStorage.getItem('typingHistory');
+                if (saved) {
+                    try {
+                        typingHistory = JSON.parse(saved);
+                    } catch (e) {
+                        typingHistory = [];
+                    }
+                }
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    const response = await fetch(`${API_BASE}/user/data/typing_history`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        typingHistory = result.data || [];
+                        return;
+                    }
+                } catch (error) {
+                    console.log('Failed to load from server, using local storage');
+                }
+            } else if (isGuest) {
+                try {
+                    const response = await fetch(`${API_BASE}/guest/data/typing_history`, {
+                        headers: {
+                            'X-Guest-ID': guestId
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        typingHistory = result.data || [];
+                        return;
+                    }
+                } catch (error) {
+                    console.log('Failed to load guest data, using local storage');
+                }
+            }
+            
+            // Fallback to localStorage
             const saved = localStorage.getItem('typingHistory');
             if (saved) {
                 try {
@@ -1110,8 +1167,46 @@
             }
         }
         
-        // Save history to localStorage
-        function saveHistory() {
+        // Save history to server or localStorage
+        async function saveHistory() {
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                localStorage.setItem('typingHistory', JSON.stringify(typingHistory));
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    await fetch(`${API_BASE}/user/data/typing_history`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify(typingHistory)
+                    });
+                    return;
+                } catch (error) {
+                    console.log('Failed to save to server, using local storage');
+                }
+            } else if (isGuest) {
+                try {
+                    await fetch(`${API_BASE}/guest/data/typing_history`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Guest-ID': guestId
+                        },
+                        body: JSON.stringify(typingHistory)
+                    });
+                    return;
+                } catch (error) {
+                    console.log('Failed to save guest data, using local storage');
+                }
+            }
+            
+            // Fallback to localStorage
             localStorage.setItem('typingHistory', JSON.stringify(typingHistory));
         }
         
@@ -1190,8 +1285,240 @@
             }
         });
         
-        // Load history on startup
-        loadHistory();
+        // Authentication functions
+        function initializeAuth() {
+            authToken = localStorage.getItem('authToken');
+            guestId = localStorage.getItem('guestId');
+            const userData = localStorage.getItem('user');
+            
+            if (authToken && userData) {
+                isAuthenticated = true;
+                currentUser = JSON.parse(userData);
+                updateAuthUI();
+            } else if (guestId) {
+                isGuest = true;
+                updateAuthUI();
+            } else {
+                // No authentication - create a guest session automatically
+                createGuestSession();
+                return;
+            }
+            
+            // Load user data
+            loadHistory();
+            loadUserSettings();
+        }
+        
+        // Create guest session automatically
+        async function createGuestSession() {
+            try {
+                // Check if we're running on a server (has API_BASE)
+                if (window.location.protocol === 'file:') {
+                    // Running locally without server - use localStorage only
+                    isGuest = true;
+                    guestId = 'local-guest-' + Date.now();
+                    localStorage.setItem('guestId', guestId);
+                    updateAuthUI();
+                    loadHistory();
+                    loadUserSettings();
+                    return;
+                }
+                
+                // Running on server - create proper guest session
+                const response = await fetch(`${API_BASE}/auth/guest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    guestId = result.guestId;
+                    localStorage.setItem('guestId', guestId);
+                    isGuest = true;
+                    updateAuthUI();
+                    loadHistory();
+                    loadUserSettings();
+                } else {
+                    // Fallback to local guest session
+                    isGuest = true;
+                    guestId = 'local-guest-' + Date.now();
+                    localStorage.setItem('guestId', guestId);
+                    updateAuthUI();
+                    loadHistory();
+                    loadUserSettings();
+                }
+            } catch (error) {
+                // Fallback to local guest session
+                isGuest = true;
+                guestId = 'local-guest-' + Date.now();
+                localStorage.setItem('guestId', guestId);
+                updateAuthUI();
+                loadHistory();
+                loadUserSettings();
+            }
+        }
+        
+        function updateAuthUI() {
+            // Add auth status to controls
+            const controlsContent = document.getElementById('controls-content');
+            if (controlsContent && !document.getElementById('auth-status')) {
+                const authStatus = document.createElement('div');
+                authStatus.id = 'auth-status';
+                authStatus.style.marginTop = '20px';
+                authStatus.style.padding = '10px';
+                authStatus.style.background = 'rgba(102, 126, 234, 0.1)';
+                authStatus.style.borderRadius = '8px';
+                authStatus.style.fontSize = '12px';
+                
+                if (isAuthenticated) {
+                    authStatus.innerHTML = `
+                        <div style="color: #667eea; font-weight: 500;">Signed in as ${currentUser.username}</div>
+                        <button onclick="logout()" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign Out</button>
+                    `;
+                } else if (isGuest) {
+                    authStatus.innerHTML = `
+                        <div style="color: #999;">Guest Session</div>
+                        <button onclick="switchToAuth()" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign In</button>
+                    `;
+                }
+                
+                controlsContent.appendChild(authStatus);
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('guestId');
+            window.location.href = '/auth.html';
+        }
+        
+        function switchToAuth() {
+            window.location.href = '/auth.html';
+        }
+        
+        async function loadUserSettings() {
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                const saved = localStorage.getItem('userSettings');
+                if (saved) {
+                    try {
+                        const settings = JSON.parse(saved);
+                        applySettings(settings);
+                    } catch (e) {
+                        console.log('Failed to parse saved settings');
+                    }
+                }
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    const response = await fetch(`${API_BASE}/user/data/settings`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.data) {
+                            applySettings(result.data);
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to load settings from server');
+                }
+            } else if (isGuest) {
+                try {
+                    const response = await fetch(`${API_BASE}/guest/data/settings`, {
+                        headers: {
+                            'X-Guest-ID': guestId
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.data) {
+                            applySettings(result.data);
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to load guest settings');
+                }
+            }
+        }
+        
+        function applySettings(settings) {
+            if (settings.fontSize) fontSize = settings.fontSize;
+            if (settings.textColor) textColor = settings.textColor;
+            if (settings.fontFamily) customFontFamily = settings.fontFamily;
+            if (settings.volume) currentVolume = settings.volume;
+            
+            // Update UI elements
+            if (document.getElementById('size-slider')) {
+                document.getElementById('size-slider').value = fontSize;
+                document.getElementById('size-value').textContent = fontSize + 'px';
+            }
+            if (document.getElementById('color-picker')) {
+                document.getElementById('color-picker').value = textColor;
+            }
+            if (document.getElementById('font-select')) {
+                document.getElementById('font-select').value = customFontFamily;
+            }
+            if (document.getElementById('volume-slider-vertical')) {
+                document.getElementById('volume-slider-vertical').value = currentVolume * 100;
+                document.getElementById('volume-value').textContent = Math.round(currentVolume * 100) + '%';
+            }
+        }
+        
+        async function saveUserSettings() {
+            const settings = {
+                fontSize,
+                textColor,
+                fontFamily: customFontFamily,
+                volume: currentVolume
+            };
+            
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                localStorage.setItem('userSettings', JSON.stringify(settings));
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    await fetch(`${API_BASE}/user/data/settings`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify(settings)
+                    });
+                } catch (error) {
+                    console.log('Failed to save settings to server');
+                }
+            } else if (isGuest) {
+                try {
+                    await fetch(`${API_BASE}/guest/data/settings`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Guest-ID': guestId
+                        },
+                        body: JSON.stringify(settings)
+                    });
+                } catch (error) {
+                    console.log('Failed to save guest settings');
+                }
+            }
+        }
+        
+        // Initialize authentication on startup
+        initializeAuth();
         
         // DeepSeek API functions
         async function autoCorrectWord(word) {
@@ -1610,6 +1937,7 @@
             currentVolume = this.value / 100;
             volumeValue.textContent = this.value + '%';
             if (bgAudio) bgAudio.volume = currentVolume;
+            saveUserSettings();
         });
 
         // Update cycleBackground to also change audio
@@ -1642,17 +1970,20 @@
         // Handle color change
         colorPicker.addEventListener('input', function() {
             textColor = this.value;
+            saveUserSettings();
         });
         
         // Handle size change
         sizeSlider.addEventListener('input', function() {
             fontSize = parseInt(this.value);
             sizeValue.textContent = fontSize + 'px';
+            saveUserSettings();
         });
         
         // Handle font selection
         fontSelect.addEventListener('change', function() {
             customFontFamily = this.value;
+            saveUserSettings();
         });
         
         // Handle font upload
