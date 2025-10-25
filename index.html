@@ -1671,7 +1671,13 @@
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
             localStorage.removeItem('guestId');
-            window.location.href = '/auth.html';
+            isAuthenticated = false;
+            currentUser = null;
+            authToken = null;
+            isGuest = false;
+            guestId = null;
+            updateAuthUI();
+            showAuthModal();
         }
         
         function switchToAuth() {

@@ -147,7 +147,7 @@ The application uses SQLite for data storage. The database file (`calm-typing.db
 
 The application includes:
 
-- **Authentication UI** (`auth.html`) - Sign in/up interface
+- **Authentication Modal** (integrated in `index.html`) - Sign in/up interface
 - **Main App** (`index.html`) - Typing interface with server integration
 - **Responsive Design** - Works on all devices
 
@@ -173,8 +173,7 @@ The application includes health check endpoints for monitoring:
 ├── package.json           # Dependencies and scripts
 ├── render.yaml            # Render deployment config
 ├── env.example            # Environment variables template
-├── index.html             # Main application
-├── auth.html              # Authentication interface
+├── index.html             # Main app with integrated authentication modal
 ├── config.js              # DeepSeek API configuration
 ├── script.js              # Additional client-side logic
 ├── styles.css             # Styling
