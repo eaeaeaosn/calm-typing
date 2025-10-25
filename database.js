@@ -71,6 +71,18 @@ if (isProduction && process.env.DATABASE_URL) {
         }
         if (callback) callback(null);
       });
+    },
+    
+    end: (callback) => {
+      pool.end((err) => {
+        if (err) {
+          console.error('PostgreSQL pool end error:', err);
+          if (callback) return callback(err);
+          return;
+        }
+        console.log('PostgreSQL pool ended');
+        if (callback) callback(null);
+      });
     }
   };
 } else {
