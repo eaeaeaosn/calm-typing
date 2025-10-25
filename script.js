@@ -160,10 +160,14 @@ class CalmTyping {
                 messages: [
                     {
                         role: 'user',
-                        content: `Correct this misspelled word to the most likely intended English word: "${word}". Return only the corrected word, nothing else.`
+                        content: `Analyze this word: "${word}". 
+                        1. If it's a curse word, profanity, or inappropriate language, replace it with a cute kaomoji (like (╯°□°）╯︵ ┻━┻ or (╯︵╰,) or ٩(◕‿◕)۶)
+                        2. If it's a misspelled normal word, correct it to proper English
+                        3. If it's already correct, return it unchanged
+                        Return only the result, nothing else.`
                     }
                 ],
-                max_tokens: 20,
+                max_tokens: 30,
                 temperature: 0.3
             })
         });
@@ -178,7 +182,62 @@ class CalmTyping {
         return correctedWord || word; // Return original if correction fails
     }
     
+    getKaomojiForCurseWord(word) {
+        // Curse word detection and kaomoji replacement
+        const curseWords = {
+            'shit': '(╯°□°）╯︵ ┻━┻',
+            'fuck': '(╯︵╰,)',
+            'damn': '٩(◕‿◕)۶',
+            'hell': '(╯°□°）╯︵ ┻━┻',
+            'bitch': '(╯︵╰,)',
+            'ass': '(╯°□°）╯︵ ┻━┻',
+            'crap': '(╯︵╰,)',
+            'piss': '٩(◕‿◕)۶',
+            'dick': '(╯°□°）╯︵ ┻━┻',
+            'cock': '(╯︵╰,)',
+            'pussy': '٩(◕‿◕)۶',
+            'fag': '(╯°□°）╯︵ ┻━┻',
+            'gay': '(╯︵╰,)',
+            'retard': '٩(◕‿◕)۶',
+            'stupid': '(╯°□°）╯︵ ┻━┻',
+            'idiot': '(╯︵╰,)',
+            'moron': '٩(◕‿◕)۶',
+            'bastard': '(╯°□°）╯︵ ┻━┻',
+            'whore': '(╯︵╰,)',
+            'slut': '٩(◕‿◕)۶',
+            'bitch': '(╯°□°）╯︵ ┻━┻',
+            'fucking': '(╯︵╰,)',
+            'shitty': '٩(◕‿◕)۶',
+            'damned': '(╯°□°）╯︵ ┻━┻',
+            'hellish': '(╯︵╰,)',
+            'cursed': '٩(◕‿◕)۶',
+            'fucked': '(╯°□°）╯︵ ┻━┻',
+            'shitted': '(╯︵╰,)',
+            'damning': '٩(◕‿◕)۶'
+        };
+        
+        const lowerWord = word.toLowerCase();
+        return curseWords[lowerWord] || null;
+    }
+    
     getLocalCorrection(word) {
+        // First check for curse words
+        const kaomoji = this.getKaomojiForCurseWord(word);
+        if (kaomoji) {
+            console.log('Local curse word detected, converting to kaomoji:', word, '->', kaomoji);
+            return kaomoji;
+        }
+        
+        // Check if word is already correct (common words)
+        const commonWords = [
+            'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'man', 'men', 'put', 'say', 'she', 'too', 'use', 'want', 'been', 'call', 'come', 'does', 'each', 'find', 'give', 'good', 'have', 'here', 'just', 'know', 'like', 'long', 'look', 'make', 'many', 'more', 'most', 'much', 'name', 'need', 'only', 'over', 'part', 'place', 'right', 'said', 'same', 'seem', 'should', 'small', 'still', 'such', 'take', 'than', 'them', 'there', 'these', 'they', 'this', 'time', 'very', 'well', 'were', 'what', 'when', 'where', 'which', 'while', 'will', 'with', 'work', 'would', 'write', 'your', 'about', 'after', 'again', 'before', 'below', 'between', 'during', 'except', 'inside', 'outside', 'through', 'under', 'within', 'without'
+        ];
+        
+        if (commonWords.includes(word.toLowerCase())) {
+            console.log('Word is already correct:', word);
+            return word;
+        }
+        
         // Simple local correction using common misspellings
         const corrections = {
             // Common misspellings
