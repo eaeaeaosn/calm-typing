@@ -89,20 +89,21 @@ body {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* Current Word Display */
-.current-word {
-    font-size: 4rem;
+/* Current Letter Display */
+.current-letter {
+    font-size: 8rem;
     font-weight: 300;
     color: white;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    margin: 30px 0;
-    min-height: 80px;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+    margin: 0;
+    min-height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    word-wrap: break-word;
-    animation: fadeIn 0.5s ease-in-out;
+    letter-spacing: 0.1em;
+    animation: fadeIn 0.3s ease-in-out;
+    transition: all 0.3s ease;
 }
 
 @keyframes fadeIn {
@@ -210,8 +211,9 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .current-word {
-        font-size: 2.5rem;
+    .current-letter {
+        font-size: 5rem;
+        min-height: 80px;
     }
     
     .sentence-item {
