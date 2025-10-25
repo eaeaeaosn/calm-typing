@@ -539,6 +539,63 @@
             margin-top: 15px;
             text-align: center;
         }
+        
+        /* Fish Animation Styles */
+        #fish-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 999;
+        }
+        
+        .fish {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 1;
+            animation: fish-float 2s ease-out forwards;
+            will-change: transform, opacity;
+        }
+        
+        @keyframes fish-float {
+            0% {
+                transform: translate(0, 0) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(30px, -100px) scale(1.1) rotate(5deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translate(80px, -200px) scale(1.2) rotate(10deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes fish-arc {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: translate(60px, -100px) rotate(10deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translate(120px, -200px) rotate(20deg);
+                opacity: 0;
+            }
+        }
+        
+        .fish.shark {
+            font-size: 3.2rem;
+            animation-duration: 2s;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transform-origin: center;
+        }
     </style>
 </head>
 <body>
@@ -808,6 +865,10 @@
                      opacity="0.5"
                      style="animation: driftMountain1 15s ease-in-out infinite;"/>
         </svg>
+    </div>
+    
+    <!-- 鱼的容器 -->
+    <div id="fish-layer" aria-hidden="true">
     </div>
     
     <div id="canvas-container"></div>
@@ -1412,6 +1473,164 @@
                     document.getElementById('instructions').style.display = 'none';
                 }, 500);
                 firstKey = false;
+            }
+        });
+        
+        // FishFX Module - Fish Animation System
+        (function (global) {
+            const cfg = {
+                minIntervalMs: 90,
+                maxConcurrency: 20,
+                fishEmojis: ['🐠', '🐡', '🐟'],
+                sharkEmoji: '🦈',
+                useArcProb: 0,
+                attachListener: false
+            };
+
+            const state = {
+                layer: null,
+                lastTs: 0,
+                enabled: true
+            };
+
+            function init() {
+                state.layer = document.getElementById('fish-layer');
+                if (!state.layer) {
+                    console.warn('[FishFX] 未找到 #fish-layer，已自动创建。');
+                    const el = document.createElement('div');
+                    el.id = 'fish-layer';
+                    el.setAttribute('aria-hidden', 'true');
+                    document.body.appendChild(el);
+                    state.layer = el;
+                }
+            }
+
+            function now() { return performance.now(); }
+
+            function getKeyPos(key) {
+                const rows = {
+                    num: ['`','1','2','3','4','5','6','7','8','9','0','-','='],
+                    q  : ['q','w','e','r','t','y','u','i','o','p','[',']'],
+                    a  : ['a','s','d','f','g','h','j','k','l',';'],
+                    z  : ['z','x','c','v','b','n','m',',','.','/']
+                };
+                const rowYvh = { num:85, q:88, a:91, z:94 };
+                const rowShift = { num:0.0, q:0.5, a:1.0, z:1.5 };
+
+                key = String(key || '').toLowerCase();
+                for (const r of ['num','q','a','z']) {
+                    const arr = rows[r];
+                    const idx = arr.indexOf(key);
+                    if (idx !== -1) {
+                        const vw = innerWidth, vh = innerHeight;
+                        const colW = vw / (arr.length + 2);
+                        const colIndex = idx + 1 + rowShift[r];
+                        const x = colW * (colIndex + 0.5) + (Math.random() - 0.5) * 20;
+                        const y = vh * (rowYvh[r] / 100) + (Math.random() - 0.5) * 10;
+                        return { x, y };
+                    }
+                }
+                if (key === ' ') return { x: innerWidth * 0.5, y: innerHeight * 0.95 };
+                return null;
+            }
+
+            function getRandomPos() {
+                const marginX = Math.max(20, innerWidth * 0.05);
+                const marginY = Math.max(20, innerHeight * 0.05);
+                const x = marginX + Math.random() * (innerWidth - marginX * 2);
+                const y = marginY + Math.random() * (innerHeight - marginY * 2);
+                return { x, y };
+            }
+            
+            function spawnAt(pos, { emoji, isShark = false } = {}) {
+                if (!state.enabled || !state.layer || !pos) return;
+                if (state.layer.children.length >= cfg.maxConcurrency && !isShark) return;
+
+                const el = document.createElement('span');
+                el.className = 'fish' + (isShark ? ' shark' : '');
+                el.textContent = emoji || cfg.fishEmojis[0];
+                el.style.left = pos.x + 'px';
+                el.style.top  = pos.y + 'px';
+
+                if (!isShark) {
+                    el.style.fontSize = (1.6 + Math.random() * 1.0) + 'rem';
+                    el.style.animationDuration = (1.5 + Math.random() * 0.8) + 's';
+                    if (cfg.useArcProb > 0 && Math.random() < cfg.useArcProb) el.classList.add('arc');
+                }
+
+                el.addEventListener('animationend', () => el.remove());
+                state.layer.appendChild(el);
+                return el;
+            }
+
+            function spawnNormalByKey(key) {
+                const pos = getRandomPos();
+                const emoji = cfg.fishEmojis[(Math.random() * cfg.fishEmojis.length) | 0];
+                spawnAt(pos, { emoji, isShark: false });
+            }
+
+            function spawnShark() {
+                const pos = getRandomPos();
+                spawnAt(pos, { emoji: cfg.sharkEmoji, isShark: true });
+            }
+
+            function onKeydown(e) {
+                if (!state.enabled) return;
+                if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+
+                const t = now();
+                if (t - state.lastTs < cfg.minIntervalMs) return;
+                state.lastTs = t;
+
+                if (e.key === 'Enter') {
+                    spawnShark();
+                    return;
+                }
+                spawnNormalByKey(e.key);
+            }
+
+            const FishFX = {
+                init,
+                onKeydown,
+                spawnShark,
+                spawnAt,
+                enable()  { state.enabled = true;  },
+                disable() { state.enabled = false; },
+                config(patch = {}) { Object.assign(cfg, patch); },
+            };
+
+            function autoInit() {
+                init();
+            }
+
+            global.FishFX = FishFX;
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', autoInit, { once: true });
+            } else {
+                autoInit();
+            }
+
+        })(window);
+        
+        // Integrate fish effect with existing typing functionality
+        document.addEventListener('keypress', function(e) {
+            if (e.target.tagName === 'INPUT') return;
+            
+            const char = e.key;
+            if (char.length !== 1) return;
+            
+            // Trigger fish effect for regular characters
+            if (window.FishFX) {
+                window.FishFX.onKeydown(e);
+            }
+        });
+        
+        // Trigger shark for Enter key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                if (window.FishFX) {
+                    window.FishFX.onKeydown(e);
+                }
             }
         });
     </script>
