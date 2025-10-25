@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calm Typing - Ocean Serenity</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="ocean-background">
+        <div class="waves"></div>
+        <div class="waves"></div>
+        <div class="waves"></div>
+    </div>
+    
+    <div class="container">
+        <div class="typing-area">
+            <input type="text" id="typingInput" placeholder="Start typing to find your calm..." autocomplete="off">
+            <div id="currentWord" class="current-word"></div>
+        </div>
+        
+        <div id="wordHistory" class="word-history hidden">
+            <h3>Your Journey</h3>
+            <div id="historyList"></div>
+        </div>
+        
+        <div id="sentenceContainer" class="sentence-container"></div>
+    </div>
+    
+    <audio id="backgroundMusic" loop>
+        <source src="https://www.soundjay.com/misc/sounds/ocean-waves-1.wav" type="audio/wav">
+        <source src="https://www.soundjay.com/misc/sounds/ocean-waves-1.mp3" type="audio/mp3">
+    </audio>
+    
+    <div class="controls">
+        <button id="musicToggle" class="music-toggle">🔊</button>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
