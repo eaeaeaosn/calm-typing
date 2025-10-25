@@ -30,21 +30,30 @@ if (isProduction && process.env.DATABASE_URL) {
     // Wrap PostgreSQL pool methods to match SQLite interface
     get: (query, params, callback) => {
       pool.query(query, params, (err, result) => {
-        if (err) return callback(err);
+        if (err) {
+          console.error('PostgreSQL get error:', err);
+          return callback(err);
+        }
         callback(null, result.rows[0] || null);
       });
     },
     
     all: (query, params, callback) => {
       pool.query(query, params, (err, result) => {
-        if (err) return callback(err);
+        if (err) {
+          console.error('PostgreSQL all error:', err);
+          return callback(err);
+        }
         callback(null, result.rows);
       });
     },
     
     run: (query, params, callback) => {
       pool.query(query, params, (err, result) => {
-        if (err) return callback(err);
+        if (err) {
+          console.error('PostgreSQL run error:', err);
+          return callback(err);
+        }
         // For PostgreSQL, we need to get the last inserted ID differently
         const lastID = result.rows && result.rows[0] ? result.rows[0].id : null;
         callback(null, { lastID: lastID, changes: result.rowCount });

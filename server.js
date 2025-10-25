@@ -224,28 +224,33 @@ app.post('/api/auth/register', async (req, res) => {
       // Generate a unique ID for the user
       const userId = uuidv4();
       
-      db.run(
-        'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)',
-        [userId, username, email, passwordHash],
-        function(err) {
-          if (err) {
-            console.error('Database error during user creation:', err);
-            return res.status(500).json({ error: 'Failed to create user' });
-          }
-          
-          const token = jwt.sign(
-            { userId: userId, username, email },
-            process.env.JWT_SECRET || 'your-jwt-secret',
-            { expiresIn: '24h' }
-          );
-          
-          res.json({ 
-            message: 'User created successfully',
-            token,
-            user: { id: userId, username, email }
-          });
+      // Use a different approach for PostgreSQL
+      const insertQuery = process.env.NODE_ENV === 'production' 
+        ? 'INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)'
+        : 'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)';
+      
+      const insertParams = process.env.NODE_ENV === 'production'
+        ? [userId, username, email, passwordHash]
+        : [userId, username, email, passwordHash];
+      
+      db.run(insertQuery, insertParams, function(err) {
+        if (err) {
+          console.error('Database error during user creation:', err);
+          return res.status(500).json({ error: 'Failed to create user' });
         }
-      );
+        
+        const token = jwt.sign(
+          { userId: userId, username, email },
+          process.env.JWT_SECRET || 'your-jwt-secret',
+          { expiresIn: '24h' }
+        );
+        
+        res.json({ 
+          message: 'User created successfully',
+          token,
+          user: { id: userId, username, email }
+        });
+      });
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

@@ -2,6 +2,21 @@
 
 A calming typing experience with server-side authentication and data persistence, optimized for Render deployment.
 
+## 🌐 Live Demo
+
+[![Render](https://img.shields.io/badge/Render-Deployed-brightgreen)](https://calm-typing-backend.onrender.com)
+[![Node.js](https://img.shields.io/badge/Node.js-25.0.0-green)](https://nodejs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)](https://postgresql.org/)
+
+### 🚀 [**Try Calm Typing Live**](https://calm-typing-backend.onrender.com)
+
+*Experience the full typing application with user authentication, data persistence, and all features!*
+
+### 🔗 Quick Links
+- **Main App**: [https://calm-typing-backend.onrender.com](https://calm-typing-backend.onrender.com)
+- **Admin Dashboard**: [https://calm-typing-backend.onrender.com/api/admin/users](https://calm-typing-backend.onrender.com/api/admin/users)
+- **Health Check**: [https://calm-typing-backend.onrender.com/api/health](https://calm-typing-backend.onrender.com/api/health)
+
 ## Features
 
 - **User Authentication**: Sign up, sign in, or continue as guest
