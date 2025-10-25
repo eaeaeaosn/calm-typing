@@ -230,10 +230,15 @@ const initDatabase = () => {
                   console.log('Data column added to guest_sessions table');
                 }
                 
-                // Add unique constraint to user_data if it doesn't exist
-                db.exec('ALTER TABLE user_data ADD CONSTRAINT IF NOT EXISTS user_data_user_id_data_type_key UNIQUE (user_id, data_type)', (err) => {
+                // Add unique constraint to user_data (PostgreSQL doesn't support IF NOT EXISTS for constraints)
+                db.exec('ALTER TABLE user_data ADD CONSTRAINT user_data_user_id_data_type_key UNIQUE (user_id, data_type)', (err) => {
                   if (err) {
-                    console.error('Error adding unique constraint to user_data:', err);
+                    // If constraint already exists, that's fine - just log it
+                    if (err.code === '42710') { // duplicate_object error code
+                      console.log('Unique constraint already exists on user_data table');
+                    } else {
+                      console.error('Error adding unique constraint to user_data:', err);
+                    }
                   } else {
                     console.log('Unique constraint added to user_data table');
                   }
