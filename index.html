@@ -745,6 +745,186 @@
             z-index: 1550;
             pointer-events: none; /* allow clicks to pass through, we'll use mousemove on document */
         }
+        
+        /* Authentication Modal Styles */
+        .auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+        
+        .auth-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .auth-container .logo {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #333;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .auth-container .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+        
+        .auth-tabs .tab {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        
+        .auth-tabs .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .auth-button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-bottom: 15px;
+        }
+        
+        .auth-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .auth-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .guest-button {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .guest-button:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .divider {
+            margin: 20px 0;
+            text-align: center;
+            color: #999;
+            position: relative;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e1e1e1;
+        }
+        
+        .divider span {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0 15px;
+        }
+        
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -1128,6 +1308,67 @@
         </div>
     </div>
     
+    <!-- Authentication Modal -->
+    <div id="auth-modal" class="auth-modal">
+        <div class="auth-container">
+            <div class="logo">Calm Typing</div>
+            <div class="subtitle">Choose how you'd like to start</div>
+            
+            <div class="auth-tabs">
+                <button class="tab active" id="login-tab">Sign In</button>
+                <button class="tab" id="register-tab">Sign Up</button>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form active">
+                <form id="login-form-element">
+                    <div class="form-group">
+                        <label for="login-username">Username or Email</label>
+                        <input type="text" id="login-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" name="password" required>
+                    </div>
+                    <button type="submit" class="auth-button" id="login-btn">
+                        <span id="login-text">Sign In</span>
+                        <div id="login-loading" class="loading" style="display: none;"></div>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Register Form -->
+            <div id="register-form" class="auth-form">
+                <form id="register-form-element">
+                    <div class="form-group">
+                        <label for="register-username">Username</label>
+                        <input type="text" id="register-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email</label>
+                        <input type="email" id="register-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <input type="password" id="register-password" name="password" required minlength="6">
+                    </div>
+                    <button type="submit" class="auth-button" id="register-btn">
+                        <span id="register-text">Sign Up</span>
+                        <div id="register-loading" class="loading" style="display: none;"></div>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="divider">
+                <span>or</span>
+            </div>
+            
+            <button class="guest-button" id="guest-button">
+                Continue as Guest
+            </button>
+        </div>
+    </div>
+
     <div id="instructions">
         Start typing anywhere...
     </div>
@@ -1157,6 +1398,16 @@
             maxTokens: 50,
             temperature: 0.7
         };
+        
+        // Server API Configuration
+        const API_BASE = window.location.origin + '/api';
+        
+        // Authentication state
+        let isAuthenticated = false;
+        let isGuest = false;
+        let authToken = null;
+        let guestId = null;
+        let currentUser = null;
         
         const container = document.getElementById('canvas-container');
         const fontUpload = document.getElementById('font-upload');
@@ -1221,8 +1472,55 @@
             return '<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 6l-3 4.5L8 6 2 19h20L14 6z" fill="currentColor"/></svg>';
         }
         
-        // Load history from localStorage
-        function loadHistory() {
+        // Load history from server or localStorage
+        async function loadHistory() {
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                const saved = localStorage.getItem('typingHistory');
+                if (saved) {
+                    try {
+                        typingHistory = JSON.parse(saved);
+                    } catch (e) {
+                        typingHistory = [];
+                    }
+                }
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    const response = await fetch(`${API_BASE}/user/data/typing_history`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        typingHistory = result.data || [];
+                        return;
+                    }
+                } catch (error) {
+                    console.log('Failed to load from server, using local storage');
+                }
+            } else if (isGuest) {
+                try {
+                    const response = await fetch(`${API_BASE}/guest/data/typing_history`, {
+                        headers: {
+                            'X-Guest-ID': guestId
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        typingHistory = result.data || [];
+                        return;
+                    }
+                } catch (error) {
+                    console.log('Failed to load guest data, using local storage');
+                }
+            }
+            
+            // Fallback to localStorage
             const saved = localStorage.getItem('typingHistory');
             if (saved) {
                 try {
@@ -1233,8 +1531,46 @@
             }
         }
         
-        // Save history to localStorage
-        function saveHistory() {
+        // Save history to server or localStorage
+        async function saveHistory() {
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                localStorage.setItem('typingHistory', JSON.stringify(typingHistory));
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    await fetch(`${API_BASE}/user/data/typing_history`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify(typingHistory)
+                    });
+                    return;
+                } catch (error) {
+                    console.log('Failed to save to server, using local storage');
+                }
+            } else if (isGuest) {
+                try {
+                    await fetch(`${API_BASE}/guest/data/typing_history`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Guest-ID': guestId
+                        },
+                        body: JSON.stringify(typingHistory)
+                    });
+                    return;
+                } catch (error) {
+                    console.log('Failed to save guest data, using local storage');
+                }
+            }
+            
+            // Fallback to localStorage
             localStorage.setItem('typingHistory', JSON.stringify(typingHistory));
         }
         
@@ -1648,6 +1984,563 @@
         // Load personal history initially
         loadPersonalHistory();
         renderPersonalList();
+
+        // Authentication functions
+        function initializeAuth() {
+            console.log('Initializing authentication...');
+            authToken = localStorage.getItem('authToken');
+            guestId = localStorage.getItem('guestId');
+            const userData = localStorage.getItem('user');
+            
+            console.log('Auth token:', authToken);
+            console.log('Guest ID:', guestId);
+            console.log('User data:', userData);
+            
+            // Check if we're running locally (file:// protocol)
+            if (window.location.protocol === 'file:') {
+                console.log('Running in local file mode');
+                // For local testing, always show auth modal first time
+                if (!authToken && !guestId) {
+                    console.log('No authentication found, showing modal');
+                    showAuthModal();
+                    return;
+                }
+            }
+            
+            if (authToken && userData) {
+                isAuthenticated = true;
+                currentUser = JSON.parse(userData);
+                updateAuthUI();
+                hideAuthModal();
+                console.log('User authenticated');
+            } else if (guestId) {
+                isGuest = true;
+                updateAuthUI();
+                hideAuthModal();
+                console.log('Guest session active');
+            } else {
+                // No authentication - show auth modal
+                console.log('No authentication found, showing modal');
+                showAuthModal();
+                return;
+            }
+            
+            // Load user data
+            loadHistory();
+            loadUserSettings();
+        }
+        
+        function showAuthModal() {
+            const authModal = document.getElementById('auth-modal');
+            if (authModal) {
+                authModal.style.display = 'flex';
+                console.log('Auth modal shown');
+            } else {
+                console.log('Auth modal not found');
+            }
+        }
+        
+        function hideAuthModal() {
+            const authModal = document.getElementById('auth-modal');
+            if (authModal) {
+                authModal.style.display = 'none';
+            }
+        }
+        
+        // Create guest session automatically
+        async function createGuestSession() {
+            try {
+                // Check if we're running on a server (has API_BASE)
+                if (window.location.protocol === 'file:') {
+                    // Running locally without server - use localStorage only
+                    isGuest = true;
+                    guestId = 'local-guest-' + Date.now();
+                    localStorage.setItem('guestId', guestId);
+                    updateAuthUI();
+                    loadHistory();
+                    loadUserSettings();
+                    return;
+                }
+                
+                // Running on server - create proper guest session
+                const response = await fetch(`${API_BASE}/auth/guest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    guestId = result.guestId;
+                    localStorage.setItem('guestId', guestId);
+                    isGuest = true;
+                    updateAuthUI();
+                    loadHistory();
+                    loadUserSettings();
+                } else {
+                    // Fallback to local guest session
+                    isGuest = true;
+                    guestId = 'local-guest-' + Date.now();
+                    localStorage.setItem('guestId', guestId);
+                    updateAuthUI();
+                    loadHistory();
+                    loadUserSettings();
+                }
+            } catch (error) {
+                // Fallback to local guest session
+                isGuest = true;
+                guestId = 'local-guest-' + Date.now();
+                localStorage.setItem('guestId', guestId);
+                updateAuthUI();
+                loadHistory();
+                loadUserSettings();
+            }
+        }
+        
+        function updateAuthUI() {
+            // Add auth status to controls
+            const controlsContent = document.getElementById('controls-content');
+            if (controlsContent && !document.getElementById('auth-status')) {
+                const authStatus = document.createElement('div');
+                authStatus.id = 'auth-status';
+                authStatus.style.marginTop = '20px';
+                authStatus.style.padding = '10px';
+                authStatus.style.background = 'rgba(102, 126, 234, 0.1)';
+                authStatus.style.borderRadius = '8px';
+                authStatus.style.fontSize = '12px';
+                
+                if (isAuthenticated) {
+                    authStatus.innerHTML = `
+                        <div style="color: #667eea; font-weight: 500;">Signed in as ${currentUser.username}</div>
+                        <button onclick="logout()" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign Out</button>
+                    `;
+                } else if (isGuest) {
+                    authStatus.innerHTML = `
+                        <div style="color: #999;">Guest Session</div>
+                        <button onclick="switchToAuth()" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign In</button>
+                    `;
+                }
+                
+                controlsContent.appendChild(authStatus);
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('guestId');
+            isAuthenticated = false;
+            currentUser = null;
+            authToken = null;
+            isGuest = false;
+            guestId = null;
+            updateAuthUI();
+            showAuthModal();
+        }
+        
+        function switchToAuth() {
+            showAuthModal();
+        }
+        
+        // Function to clear all authentication data (for testing)
+        function clearAuthData() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('guestId');
+            localStorage.removeItem('typingHistory');
+            localStorage.removeItem('userSettings');
+            console.log('All authentication data cleared');
+            location.reload();
+        }
+        
+        // Authentication form handlers
+        function switchAuthTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.auth-tabs .tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tab + '-tab').classList.add('active');
+            
+            // Update forms
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            document.getElementById(tab + '-form').classList.add('active');
+            
+            // Clear messages
+            clearAuthMessages();
+        }
+        
+        function clearAuthMessages() {
+            const messages = document.querySelectorAll('.error-message, .success-message');
+            messages.forEach(msg => msg.remove());
+        }
+        
+        function showAuthError(message) {
+            clearAuthMessages();
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            document.querySelector('.auth-container').insertBefore(errorDiv, document.querySelector('.auth-tabs'));
+        }
+        
+        function showAuthSuccess(message) {
+            clearAuthMessages();
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            document.querySelector('.auth-container').insertBefore(successDiv, document.querySelector('.auth-tabs'));
+        }
+        
+        function setAuthLoading(buttonId, textId, loadingId, isLoading) {
+            const button = document.getElementById(buttonId);
+            const text = document.getElementById(textId);
+            const loading = document.getElementById(loadingId);
+            
+            button.disabled = isLoading;
+            text.style.display = isLoading ? 'none' : 'inline';
+            loading.style.display = isLoading ? 'inline-block' : 'none';
+        }
+        
+        async function handleLogin(event) {
+            event.preventDefault();
+            setAuthLoading('login-btn', 'login-text', 'login-loading', true);
+            
+            const formData = new FormData(event.target);
+            const data = {
+                username: formData.get('username'),
+                password: formData.get('password')
+            };
+            
+            // Check if we're running locally (file:// or localhost/127.0.0.1)
+            const isLocalMode = window.location.protocol === 'file:' || 
+                               window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' ||
+                               window.location.hostname === '';
+            
+            if (isLocalMode) {
+                // Local mode - simulate login
+                showAuthError('Server not available in local mode. Please use "Continue as Guest" or deploy to test authentication.');
+                setAuthLoading('login-btn', 'login-text', 'login-loading', false);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Store token and user data
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    showAuthSuccess('Login successful! Redirecting...');
+                    setTimeout(() => {
+                        isAuthenticated = true;
+                        currentUser = result.user;
+                        authToken = result.token;
+                        updateAuthUI();
+                        hideAuthModal();
+                        loadHistory();
+                        loadUserSettings();
+                    }, 1000);
+                } else {
+                    showAuthError(result.error || 'Login failed');
+                }
+            } catch (error) {
+                showAuthError('Network error. Please try again.');
+            } finally {
+                setAuthLoading('login-btn', 'login-text', 'login-loading', false);
+            }
+        }
+        
+        async function handleRegister(event) {
+            event.preventDefault();
+            setAuthLoading('register-btn', 'register-text', 'register-loading', true);
+            
+            const formData = new FormData(event.target);
+            const data = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+            
+            // Check if we're running locally (file:// or localhost/127.0.0.1)
+            const isLocalMode = window.location.protocol === 'file:' || 
+                               window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' ||
+                               window.location.hostname === '';
+            
+            if (isLocalMode) {
+                // Local mode - simulate registration
+                showAuthError('Server not available in local mode. Please use "Continue as Guest" or deploy to test authentication.');
+                setAuthLoading('register-btn', 'register-text', 'register-loading', false);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Store token and user data
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    showAuthSuccess('Registration successful! Redirecting...');
+                    setTimeout(() => {
+                        isAuthenticated = true;
+                        currentUser = result.user;
+                        authToken = result.token;
+                        updateAuthUI();
+                        hideAuthModal();
+                        loadHistory();
+                        loadUserSettings();
+                    }, 1000);
+                } else {
+                    showAuthError(result.error || 'Registration failed');
+                }
+            } catch (error) {
+                showAuthError('Network error. Please try again.');
+            } finally {
+                setAuthLoading('register-btn', 'register-text', 'register-loading', false);
+            }
+        }
+        
+        async function handleGuestAccess() {
+            console.log('Handling guest access...');
+            console.log('Protocol:', window.location.protocol);
+            console.log('Hostname:', window.location.hostname);
+            
+            // Check if we're running locally (file:// or localhost/127.0.0.1)
+            const isLocalMode = window.location.protocol === 'file:' || 
+                               window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' ||
+                               window.location.hostname === '';
+            
+            if (isLocalMode) {
+                console.log('Local mode detected, creating local guest session');
+                // Local mode - create guest session locally
+                const localGuestId = 'local-guest-' + Date.now();
+                localStorage.setItem('guestId', localGuestId);
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
+                showAuthSuccess('Guest session created! Redirecting...');
+                setTimeout(() => {
+                    isGuest = true;
+                    guestId = localGuestId;
+                    updateAuthUI();
+                    hideAuthModal();
+                    loadHistory();
+                    loadUserSettings();
+                }, 1000);
+                return;
+            }
+            
+            console.log('Server mode detected, connecting to server');
+            try {
+                const response = await fetch(`${API_BASE}/auth/guest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Store guest session
+                    localStorage.setItem('guestId', result.guestId);
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('user');
+                    showAuthSuccess('Guest session created! Redirecting...');
+                    setTimeout(() => {
+                        isGuest = true;
+                        guestId = result.guestId;
+                        updateAuthUI();
+                        hideAuthModal();
+                        loadHistory();
+                        loadUserSettings();
+                    }, 1000);
+                } else {
+                    showAuthError(result.error || 'Failed to create guest session');
+                }
+            } catch (error) {
+                showAuthError('Network error. Please try again.');
+            }
+        }
+        
+        async function loadUserSettings() {
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                const saved = localStorage.getItem('userSettings');
+                if (saved) {
+                    try {
+                        const settings = JSON.parse(saved);
+                        applySettings(settings);
+                    } catch (e) {
+                        console.log('Failed to parse saved settings');
+                    }
+                }
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    const response = await fetch(`${API_BASE}/user/data/settings`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.data) {
+                            applySettings(result.data);
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to load settings from server');
+                }
+            } else if (isGuest) {
+                try {
+                    const response = await fetch(`${API_BASE}/guest/data/settings`, {
+                        headers: {
+                            'X-Guest-ID': guestId
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.data) {
+                            applySettings(result.data);
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to load guest settings');
+                }
+            }
+        }
+        
+        function applySettings(settings) {
+            if (settings.fontSize) fontSize = settings.fontSize;
+            if (settings.textColor) textColor = settings.textColor;
+            if (settings.fontFamily) customFontFamily = settings.fontFamily;
+            if (settings.volume) currentVolume = settings.volume;
+            
+            // Update UI elements
+            if (document.getElementById('size-slider')) {
+                document.getElementById('size-slider').value = fontSize;
+                document.getElementById('size-value').textContent = fontSize + 'px';
+            }
+            if (document.getElementById('color-picker')) {
+                document.getElementById('color-picker').value = textColor;
+            }
+            if (document.getElementById('font-select')) {
+                document.getElementById('font-select').value = customFontFamily;
+            }
+            if (document.getElementById('volume-slider-vertical')) {
+                document.getElementById('volume-slider-vertical').value = currentVolume * 100;
+                document.getElementById('volume-value').textContent = Math.round(currentVolume * 100) + '%';
+            }
+        }
+        
+        async function saveUserSettings() {
+            const settings = {
+                fontSize,
+                textColor,
+                fontFamily: customFontFamily,
+                volume: currentVolume
+            };
+            
+            // Check if we're running on a server
+            if (window.location.protocol === 'file:') {
+                // Local file mode - use localStorage only
+                localStorage.setItem('userSettings', JSON.stringify(settings));
+                return;
+            }
+            
+            if (isAuthenticated) {
+                try {
+                    await fetch(`${API_BASE}/user/data/settings`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify(settings)
+                    });
+                } catch (error) {
+                    console.log('Failed to save settings to server');
+                }
+            } else if (isGuest) {
+                try {
+                    await fetch(`${API_BASE}/guest/data/settings`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Guest-ID': guestId
+                        },
+                        body: JSON.stringify(settings)
+                    });
+                } catch (error) {
+                    console.log('Failed to save guest settings');
+                }
+            }
+        }
+        
+        // Initialize authentication on startup
+        initializeAuth();
+        
+        // Add event listeners for authentication modal
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const loginTab = document.getElementById('login-tab');
+            const registerTab = document.getElementById('register-tab');
+            
+            if (loginTab) {
+                loginTab.addEventListener('click', function() {
+                    switchAuthTab('login');
+                });
+            }
+            
+            if (registerTab) {
+                registerTab.addEventListener('click', function() {
+                    switchAuthTab('register');
+                });
+            }
+            
+            // Form submissions
+            const loginForm = document.getElementById('login-form-element');
+            const registerForm = document.getElementById('register-form-element');
+            const guestButton = document.getElementById('guest-button');
+            
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(event) {
+                    handleLogin(event);
+                });
+            }
+            
+            if (registerForm) {
+                registerForm.addEventListener('submit', function(event) {
+                    handleRegister(event);
+                });
+            }
+            
+            if (guestButton) {
+                guestButton.addEventListener('click', function() {
+                    handleGuestAccess();
+                });
+            }
+        });
         
         // DeepSeek API functions
         async function autoCorrectWord(word) {
@@ -2066,6 +2959,7 @@
             currentVolume = this.value / 100;
             volumeValue.textContent = this.value + '%';
             if (bgAudio) bgAudio.volume = currentVolume;
+            saveUserSettings();
         });
 
         // Update cycleBackground to also change audio
@@ -2098,17 +2992,20 @@
         // Handle color change
         colorPicker.addEventListener('input', function() {
             textColor = this.value;
+            saveUserSettings();
         });
         
         // Handle size change
         sizeSlider.addEventListener('input', function() {
             fontSize = parseInt(this.value);
             sizeValue.textContent = fontSize + 'px';
+            saveUserSettings();
         });
         
         // Handle font selection
         fontSelect.addEventListener('change', function() {
             customFontFamily = this.value;
+            saveUserSettings();
         });
         
         // Handle font upload
