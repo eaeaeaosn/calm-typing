@@ -52,19 +52,36 @@ if (isProduction && process.env.DATABASE_URL) {
       pool.query(query, params, (err, result) => {
         if (err) {
           console.error('PostgreSQL run error:', err);
-          return callback(err);
+          if (callback) return callback(err);
+          return;
         }
         // For PostgreSQL, we need to get the last inserted ID differently
         const lastID = result.rows && result.rows[0] ? result.rows[0].id : null;
         const changes = result.rowCount || 0;
-        callback(null, { lastID: lastID, changes: changes });
+        if (callback) callback(null, { lastID: lastID, changes: changes });
       });
     },
     
     exec: (query, callback) => {
       pool.query(query, (err, result) => {
-        if (err) return callback(err);
-        callback(null);
+        if (err) {
+          console.error('PostgreSQL exec error:', err);
+          if (callback) return callback(err);
+          return;
+        }
+        if (callback) callback(null);
+      });
+    },
+    
+    end: (callback) => {
+      pool.end((err) => {
+        if (err) {
+          console.error('PostgreSQL pool end error:', err);
+          if (callback) return callback(err);
+          return;
+        }
+        console.log('PostgreSQL pool ended');
+        if (callback) callback(null);
       });
     }
   };
@@ -89,6 +106,7 @@ const initDatabase = () => {
     
     CREATE TABLE IF NOT EXISTS guest_sessions (
       id TEXT PRIMARY KEY,
+      data TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -134,6 +152,7 @@ const initDatabase = () => {
     const createGuestSessionsTable = `
       CREATE TABLE IF NOT EXISTS guest_sessions (
         id TEXT PRIMARY KEY,
+        data TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -150,6 +169,19 @@ const initDatabase = () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (guest_id) REFERENCES guest_sessions(id)
+      );
+    `;
+    
+    const createUserDataTable = `
+      CREATE TABLE IF NOT EXISTS user_data (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT,
+        data_type TEXT NOT NULL,
+        data_content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        UNIQUE(user_id, data_type)
       );
     `;
     
@@ -188,12 +220,52 @@ const initDatabase = () => {
           }
           console.log('Typing history table created');
           
-          db.exec(createUserSettingsTable, (err) => {
+          db.exec(createUserDataTable, (err) => {
             if (err) {
-              console.error('Error creating user_settings table:', err);
+              console.error('Error creating user_data table:', err);
               return;
             }
-            console.log('PostgreSQL database initialized successfully');
+            console.log('User data table created');
+            
+            db.exec(createUserSettingsTable, (err) => {
+              if (err) {
+                console.error('Error creating user_settings table:', err);
+                return;
+              }
+              console.log('User settings table created');
+              
+              // Add missing data column to guest_sessions if it doesn't exist
+              db.exec('ALTER TABLE guest_sessions ADD COLUMN IF NOT EXISTS data TEXT', (err) => {
+                if (err) {
+                  console.error('Error adding data column to guest_sessions:', err);
+                } else {
+                  console.log('Data column added to guest_sessions table');
+                }
+                
+                // Add unique constraint to user_data safely
+                const addConstraintQuery = `
+                  DO $$
+                  BEGIN
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint
+                      WHERE conname = 'user_data_user_id_data_type_key'
+                    ) THEN
+                      ALTER TABLE user_data
+                      ADD CONSTRAINT user_data_user_id_data_type_key UNIQUE (user_id, data_type);
+                    END IF;
+                  END $$;
+                `;
+                
+                db.exec(addConstraintQuery, (err) => {
+                  if (err) {
+                    console.error('Error adding unique constraint to user_data:', err);
+                  } else {
+                    console.log('Unique constraint checked/added to user_data table');
+                  }
+                  console.log('PostgreSQL database initialized successfully');
+                });
+              });
+            });
           });
         });
       });

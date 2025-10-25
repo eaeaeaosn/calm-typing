@@ -1,5 +1,5 @@
 const express = require('express');
-const session = require('express-session');
+const session = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
@@ -31,7 +31,11 @@ app.use(helmet({
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Trust proxy for Render deployment
+  trustProxy: true
 });
 app.use('/api/', limiter);
 
@@ -91,7 +95,11 @@ const authenticateGuest = (req, res, next) => {
   }
   
   // Verify guest session exists
-  db.get('SELECT * FROM guest_sessions WHERE id = ?', [guestId], (err, row) => {
+  const guestCheckQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT * FROM guest_sessions WHERE id = $1'
+    : 'SELECT * FROM guest_sessions WHERE id = ?';
+  
+  db.get(guestCheckQuery, [guestId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -332,8 +340,13 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/guest', (req, res) => {
   const guestId = uuidv4();
   
-  db.run('INSERT INTO guest_sessions (id) VALUES (?)', [guestId], function(err) {
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO guest_sessions (id) VALUES ($1)'
+    : 'INSERT INTO guest_sessions (id) VALUES (?)';
+  
+  db.run(insertQuery, [guestId], function(err) {
     if (err) {
+      console.error('Guest session creation error:', err);
       return res.status(500).json({ error: 'Failed to create guest session' });
     }
     
@@ -350,13 +363,15 @@ app.get('/api/user/data/:dataType', authenticateToken, (req, res) => {
   const { dataType } = req.params;
   const userId = req.user.userId;
   
-  db.get(
-    'SELECT data_content FROM user_data WHERE user_id = ? AND data_type = ? ORDER BY updated_at DESC LIMIT 1',
-    [userId, dataType],
-    (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT data_content FROM user_data WHERE user_id = $1 AND data_type = $2 ORDER BY updated_at DESC LIMIT 1'
+    : 'SELECT data_content FROM user_data WHERE user_id = ? AND data_type = ? ORDER BY updated_at DESC LIMIT 1';
+  
+  db.get(selectQuery, [userId, dataType], (err, row) => {
+    if (err) {
+      console.error('User data retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
       
       if (row) {
         res.json({ data: JSON.parse(row.data_content) });
@@ -373,17 +388,18 @@ app.post('/api/user/data/:dataType', authenticateToken, (req, res) => {
   const userId = req.user.userId;
   const dataContent = JSON.stringify(req.body);
   
-  db.run(
-    'INSERT OR REPLACE INTO user_data (user_id, data_type, data_content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
-    [userId, dataType, dataContent],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to save data' });
-      }
-      
-      res.json({ message: 'Data saved successfully' });
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO user_data (user_id, data_type, data_content, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id, data_type) DO UPDATE SET data_content = EXCLUDED.data_content, updated_at = CURRENT_TIMESTAMP'
+    : 'INSERT OR REPLACE INTO user_data (user_id, data_type, data_content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)';
+  
+  db.run(insertQuery, [userId, dataType, dataContent], function(err) {
+    if (err) {
+      console.error('User data save error:', err);
+      return res.status(500).json({ error: 'Failed to save data' });
     }
-  );
+    
+    res.json({ message: 'Data saved successfully' });
+  });
 });
 
 // Guest data endpoints
@@ -391,7 +407,11 @@ app.get('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
   const { dataType } = req.params;
   const guestId = req.guestId;
   
-  db.get('SELECT data FROM guest_sessions WHERE id = ?', [guestId], (err, row) => {
+  const guestDataQuery = process.env.NODE_ENV === 'production' 
+  ? 'SELECT data FROM guest_sessions WHERE id = $1'
+  : 'SELECT data FROM guest_sessions WHERE id = ?';
+
+db.get(guestDataQuery, [guestId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -409,7 +429,11 @@ app.post('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
   const { dataType } = req.params;
   const guestId = req.guestId;
   
-  db.get('SELECT data FROM guest_sessions WHERE id = ?', [guestId], (err, row) => {
+  const guestDataQuery = process.env.NODE_ENV === 'production' 
+  ? 'SELECT data FROM guest_sessions WHERE id = $1'
+  : 'SELECT data FROM guest_sessions WHERE id = ?';
+
+db.get(guestDataQuery, [guestId], (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -421,10 +445,11 @@ app.post('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
     
     guestData[dataType] = req.body;
     
-    db.run(
-      'UPDATE guest_sessions SET data = ?, last_activity = CURRENT_TIMESTAMP WHERE id = ?',
-      [JSON.stringify(guestData), guestId],
-      function(err) {
+    const updateQuery = process.env.NODE_ENV === 'production' 
+      ? 'UPDATE guest_sessions SET data = $1, last_activity = CURRENT_TIMESTAMP WHERE id = $2'
+      : 'UPDATE guest_sessions SET data = ?, last_activity = CURRENT_TIMESTAMP WHERE id = ?';
+    
+    db.run(updateQuery, [JSON.stringify(guestData), guestId], function(err) {
         if (err) {
           return res.status(500).json({ error: 'Failed to save guest data' });
         }
@@ -458,13 +483,22 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
-  db.close((err) => {
-    if (err) {
-      console.error(err.message);
-    }
-    console.log('Database connection closed');
-    process.exit(0);
-  });
+  if (process.env.NODE_ENV === 'production') {
+    // PostgreSQL - end the pool
+    db.end(() => {
+      console.log('PostgreSQL pool closed');
+      process.exit(0);
+    });
+  } else {
+    // SQLite - close the database
+    db.close((err) => {
+      if (err) {
+        console.error(err.message);
+      }
+      console.log('SQLite database connection closed');
+      process.exit(0);
+    });
+  }
 });
 
 module.exports = app;

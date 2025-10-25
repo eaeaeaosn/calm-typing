@@ -1368,7 +1368,7 @@
             </button>
         </div>
     </div>
-
+    
     <div id="instructions">
         Start typing anywhere...
     </div>
@@ -1441,12 +1441,12 @@
         let resetTimeout;
         let currentLineChars = [];
         let totalLineWidth = 0;
-    let currentWord = '';
+        let currentWord = '';
     let currentSentence = '';
-    let typingHistory = [];
+        let typingHistory = [];
     let sentenceHistory = [];
-    let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
-    let currentVolume = 0.5;
+        let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
+        let currentVolume = 0.5;
         
         const backgrounds = [
             { element: null, icon: createRectIcon(), name: 'none' },
@@ -1477,14 +1477,14 @@
             // Check if we're running on a server
             if (window.location.protocol === 'file:') {
                 // Local file mode - use localStorage only
-                const saved = localStorage.getItem('typingHistory');
-                if (saved) {
-                    try {
-                        typingHistory = JSON.parse(saved);
-                    } catch (e) {
-                        typingHistory = [];
-                    }
+            const saved = localStorage.getItem('typingHistory');
+            if (saved) {
+                try {
+                    typingHistory = JSON.parse(saved);
+                } catch (e) {
+                    typingHistory = [];
                 }
+            }
                 return;
             }
             
@@ -3046,7 +3046,7 @@
             if (e.target.tagName === 'INPUT') return;
             const char = e.key;
             if (char.length !== 1) return;
-
+            
             // Reset on space and save current word with auto-correction
             if (char === ' ') {
                 if (currentWord.length > 0) {
@@ -3057,11 +3057,11 @@
                 charPosition = 0;
                 return;
             }
-
+            
             // Add character to current word and sentence
             currentWord += char;
             currentSentence += char;
-
+            
             clearTimeout(resetTimeout);
             createFloatingText(char, charPosition);
             charPosition++;
@@ -3082,7 +3082,7 @@
                 charPosition = 0;
                 return;
             }
-
+            
             // Auto-reset after 1 second of no typing with auto-correction
             resetTimeout = setTimeout(async () => {
                 if (currentWord.length > 0) {
@@ -3101,7 +3101,7 @@
                 toggleHistory();
                 return;
             }
-
+            
             if (e.key === 'Enter') {
                 if (currentWord.length > 0) {
                     addToHistory(currentWord.trim());
