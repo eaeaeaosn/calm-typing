@@ -3451,6 +3451,24 @@
                 }
             });
         })();
+        
+        // Test function for debugging
+        window.testBirds = function() {
+            console.log('🧪 Testing bird features...');
+            if (window.FishFX) {
+                console.log('✅ FishFX is loaded');
+                if (window.FishFX.testBackgroundDetection) {
+                    window.FishFX.testBackgroundDetection();
+                } else {
+                    console.log('❌ testBackgroundDetection function not found');
+                }
+            } else {
+                console.log('❌ FishFX not loaded');
+            }
+        };
     </script>
+    
+    <!-- Fish Animation Script -->
+    <script src="fish.js"></script>
 </body>
 </html>

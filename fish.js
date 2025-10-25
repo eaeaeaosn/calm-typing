@@ -95,18 +95,99 @@
     return el;
   }
 
-  // 普通鱼：改为在视口随机位置出现（以前主要集中在底部键位映射）
+  // 判断当前是否为 mountain 背景：检测 #mountain-bg 是否存在且可见
+  function isMountainActive() {
+    try {
+      const el = document.getElementById('mountain-bg');
+      if (!el) {
+        console.log('❌ Mountain element not found');
+        return false;
+      }
+      const s = getComputedStyle(el);
+      const hasActiveClass = el.classList.contains('active');
+      console.log('🏔️ Mountain element found:', {
+        hasActiveClass,
+        display: s.display,
+        visibility: s.visibility,
+        opacity: s.opacity
+      });
+      
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      const op = parseFloat(s.opacity || '1');
+      const isVisible = op > 0.05;
+      console.log('🏔️ Mountain visibility check:', { opacity: op, isVisible });
+      return isVisible;
+    } catch (e) {
+      console.log('❌ Mountain detection error:', e);
+      return false;
+    }
+  }
+
+  // 判断当前是否为 forest 背景
+  function isForestActive() {
+    try {
+      const el = document.getElementById('forest-bg');
+      if (!el) {
+        console.log('❌ Forest element not found');
+        return false;
+      }
+      const s = getComputedStyle(el);
+      const hasActiveClass = el.classList.contains('active');
+      console.log('🌲 Forest element found:', {
+        hasActiveClass,
+        display: s.display,
+        visibility: s.visibility,
+        opacity: s.opacity
+      });
+      
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      const op = parseFloat(s.opacity || '1');
+      const isVisible = op > 0.05;
+      console.log('🌲 Forest visibility check:', { opacity: op, isVisible });
+      return isVisible;
+    } catch (e) {
+      console.log('❌ Forest detection error:', e);
+      return false;
+    }
+  }
+
+  // 根据当前背景选择普通的 emoji（鱼、鸟或森林动物）
+  function chooseNormalEmoji() {
+    if (isMountainActive()) {
+      console.log('🐦 Mountain background detected - spawning birds!');
+      const pool = cfg.birdEmojis && cfg.birdEmojis.length ? cfg.birdEmojis : ['🐦','🦜','🕊️'];
+      return pool[(Math.random() * pool.length) | 0];
+    }
+    if (isForestActive()) {
+      console.log('🦔 Forest background detected - spawning forest animals!');
+      const pool = cfg.forestEmojis && cfg.forestEmojis.length ? cfg.forestEmojis : ['🦔','🐿️','🦨'];
+      return pool[(Math.random() * pool.length) | 0];
+    }
+    console.log('🐠 Ocean/other background - spawning fish!');
+    const pool = cfg.fishEmojis && cfg.fishEmojis.length ? cfg.fishEmojis : ['🐠','🐡','🐟'];
+    return pool[(Math.random() * pool.length) | 0];
+  }
+
+  // 普通动物：根据背景选择适当的动物
   function spawnNormalByKey(key) {
-    // 如果你仍想使用键位映射位置，可改成：const pos = getKeyPos(key) || getRandomPos();
     const pos = getRandomPos();
-    const emoji = cfg.fishEmojis[(Math.random() * cfg.fishEmojis.length) | 0];
+    const emoji = chooseNormalEmoji();
     spawnAt(pos, { emoji, isShark: false });
   }
 
   function spawnShark() {
-    // 鲨鱼也在视口内随机出现（避免贴边）
+    // Enter：根据背景选择特殊动物
     const pos = getRandomPos();
-    spawnAt(pos, { emoji: cfg.sharkEmoji, isShark: true });
+    if (isMountainActive()) {
+      // mountain 背景：Enter 生成猛禽 🦅
+      spawnAt(pos, { emoji: cfg.eagleEmoji || '🦅', isShark: false });
+    } else if (isForestActive()) {
+      // forest 背景：Enter 生成孔雀 🦚
+      spawnAt(pos, { emoji: cfg.peacockEmoji || '🦚', isShark: false });
+    } else {
+      // 其它场景：正常鲨鱼
+      spawnAt(pos, { emoji: cfg.sharkEmoji, isShark: true });
+    }
   }
 
   // 断句算法占位（未来扩展）
@@ -132,6 +213,32 @@
     spawnNormalByKey(e.key);
   }
 
+  // 测试函数：手动检测背景状态
+  function testBackgroundDetection() {
+    console.log('🧪 Testing background detection...');
+    console.log('Mountain active:', isMountainActive());
+    console.log('Forest active:', isForestActive());
+    console.log('Current emoji would be:', chooseNormalEmoji());
+    
+    // 检查所有背景元素
+    const backgrounds = ['mountain-bg', 'forest-bg', 'ocean-bg'];
+    backgrounds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        const s = getComputedStyle(el);
+        console.log(`${id}:`, {
+          exists: true,
+          hasActiveClass: el.classList.contains('active'),
+          display: s.display,
+          opacity: s.opacity,
+          visibility: s.visibility
+        });
+      } else {
+        console.log(`${id}: not found`);
+      }
+    });
+  }
+
   // 对外暴露接口
   const FishFX = {
     init,
@@ -141,6 +248,7 @@
     enable()  { state.enabled = true;  },
     disable() { state.enabled = false; },
     config(patch = {}) { Object.assign(cfg, patch); },
+    testBackgroundDetection, // 测试函数
   };
 
   // 初始化舞台

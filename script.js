@@ -39,7 +39,12 @@ class CalmTyping {
         if (window.FishFX && typeof FishFX.config === 'function') {
             FishFX.config({
                 maxConcurrency: 15,
-                fishEmojis: ['🐠', '🐟', '🐡']
+                fishEmojis: ['🐠', '🐟', '🐡'],
+                birdEmojis: ['🐦', '🦜', '🕊️'],
+                forestEmojis: ['🦔', '🐿️', '🦨'],
+                peacockEmoji: '🦚',
+                eagleEmoji: '🦅',
+                sharkEmoji: '🦈'
             });
         }
     }
@@ -379,6 +384,9 @@ class CalmTyping {
             if (fullSentence.trim()) {
                 this.typedSentences.push(fullSentence);
                 this.animateSentence(fullSentence);
+                
+                // Save passage to cloud storage
+                await this.savePassageToCloud(fullSentence);
             }
             
             // Clear everything
