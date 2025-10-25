@@ -1198,13 +1198,13 @@
             <div class="subtitle">Choose how you'd like to start</div>
             
             <div class="auth-tabs">
-                <button class="tab active" onclick="switchAuthTab('login')">Sign In</button>
-                <button class="tab" onclick="switchAuthTab('register')">Sign Up</button>
+                <button class="tab active" id="login-tab">Sign In</button>
+                <button class="tab" id="register-tab">Sign Up</button>
             </div>
             
             <!-- Login Form -->
             <div id="login-form" class="auth-form active">
-                <form onsubmit="handleLogin(event)">
+                <form id="login-form-element">
                     <div class="form-group">
                         <label for="login-username">Username or Email</label>
                         <input type="text" id="login-username" name="username" required>
@@ -1222,7 +1222,7 @@
             
             <!-- Register Form -->
             <div id="register-form" class="auth-form">
-                <form onsubmit="handleRegister(event)">
+                <form id="register-form-element">
                     <div class="form-group">
                         <label for="register-username">Username</label>
                         <input type="text" id="register-username" name="username" required>
@@ -1246,7 +1246,7 @@
                 <span>or</span>
             </div>
             
-            <button class="guest-button" onclick="handleGuestAccess()">
+            <button class="guest-button" id="guest-button">
                 Continue as Guest
             </button>
         </div>
@@ -1693,7 +1693,7 @@
         function switchAuthTab(tab) {
             // Update tab buttons
             document.querySelectorAll('.auth-tabs .tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
             
             // Update forms
             document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
@@ -2034,6 +2034,48 @@
         
         // Initialize authentication on startup
         initializeAuth();
+        
+        // Add event listeners for authentication modal
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const loginTab = document.getElementById('login-tab');
+            const registerTab = document.getElementById('register-tab');
+            
+            if (loginTab) {
+                loginTab.addEventListener('click', function() {
+                    switchAuthTab('login');
+                });
+            }
+            
+            if (registerTab) {
+                registerTab.addEventListener('click', function() {
+                    switchAuthTab('register');
+                });
+            }
+            
+            // Form submissions
+            const loginForm = document.getElementById('login-form-element');
+            const registerForm = document.getElementById('register-form-element');
+            const guestButton = document.getElementById('guest-button');
+            
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(event) {
+                    handleLogin(event);
+                });
+            }
+            
+            if (registerForm) {
+                registerForm.addEventListener('submit', function(event) {
+                    handleRegister(event);
+                });
+            }
+            
+            if (guestButton) {
+                guestButton.addEventListener('click', function() {
+                    handleGuestAccess();
+                });
+            }
+        });
         
         // DeepSeek API functions
         async function autoCorrectWord(word) {
