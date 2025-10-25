@@ -94,6 +94,7 @@ const initDatabase = () => {
     
     CREATE TABLE IF NOT EXISTS guest_sessions (
       id TEXT PRIMARY KEY,
+      data TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -139,6 +140,7 @@ const initDatabase = () => {
     const createGuestSessionsTable = `
       CREATE TABLE IF NOT EXISTS guest_sessions (
         id TEXT PRIMARY KEY,
+        data TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
