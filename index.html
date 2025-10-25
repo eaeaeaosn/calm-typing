@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calm Typing - Ocean Serenity</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-      .controls { position: fixed; right: 16px; bottom: 16px; }
-      .music-toggle { font-size: 20px; padding: 8px 10px; }
-    </style>
 </head>
 <body>
     <div class="ocean-background">
@@ -19,8 +15,8 @@
     
     <div class="container">
         <div class="typing-area">
-            <input type="text" id="typingInput" placeholder="Start typing to find your calm..." autocomplete="off">
-            <div id="currentWord" class="current-word"></div>
+            <input type="text" id="typingInput" placeholder="Start typing to find your calm..." autocomplete="off" style="display: none;">
+            <div id="currentLetter" class="current-letter"></div>
         </div>
         
         <div id="wordHistory" class="word-history hidden">
@@ -31,60 +27,15 @@
         <div id="sentenceContainer" class="sentence-container"></div>
     </div>
     
-    <!-- Option B: known-working remote test file -->
     <audio id="backgroundMusic" loop preload="auto" playsinline>
         <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio>
     
     <div class="controls">
-        <button id="musicToggle" class="music-toggle" aria-label="Toggle background music">🔈</button>
+        <button id="musicToggle" class="music-toggle">🔊</button>
     </div>
     
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const audio = document.getElementById('backgroundMusic');
-      const btn = document.getElementById('musicToggle');
-      if (!audio) return;
-
-      audio.preload = 'auto';
-      audio.volume = 0.45;
-      audio.setAttribute('playsinline', '');
-
-      const setBtn = (playing) => { if (!btn) return; btn.textContent = playing ? '🔊' : '🔈'; };
-      setBtn(!audio.paused);
-
-      if (btn) {
-        btn.addEventListener('click', async () => {
-          try {
-            if (audio.paused) {
-              await audio.play();
-              setBtn(true);
-            } else {
-              audio.pause();
-              setBtn(false);
-            }
-          } catch (err) {
-            console.error('Audio play failed:', err);
-            btn.textContent = '▶️';
-          }
-        });
-      }
-
-      const tryStartOnGesture = async () => {
-        if (!audio.paused) { document.removeEventListener('click', tryStartOnGesture); return; }
-        try {
-          await audio.play();
-          setBtn(true);
-          document.removeEventListener('click', tryStartOnGesture);
-        } catch (e) { /* keep listening */ }
-      };
-      document.addEventListener('click', tryStartOnGesture);
-
-      audio.addEventListener('play', () => setBtn(true));
-      audio.addEventListener('pause', () => setBtn(false));
-      audio.addEventListener('ended', () => setBtn(false));
-    });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
