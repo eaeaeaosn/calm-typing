@@ -1022,8 +1022,12 @@
     
     <div id="history-modal">
         <div id="history-content">
-            <h2>Typing History</h2>
+            <div style="display:flex; gap:12px; margin-bottom:18px;">
+                <button id="tab-word-history" class="history-btn" style="flex:1; background:#1976d2; color:#fff;">Word History</button>
+                <button id="tab-sentence-revision" class="history-btn" style="flex:1; background:#fff; color:#1976d2; border:1px solid #1976d2;">Sentence Revisions</button>
+            </div>
             <div id="history-list"></div>
+            <div id="sentence-list" style="display:none;"></div>
             <div class="history-buttons">
                 <button class="history-btn close" id="close-history">Close</button>
                 <button class="history-btn clear" id="clear-history">Clear History</button>
@@ -1074,10 +1078,12 @@
         let resetTimeout;
         let currentLineChars = [];
         let totalLineWidth = 0;
-        let currentWord = '';
-        let typingHistory = [];
-        let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
-        let currentVolume = 0.5;
+    let currentWord = '';
+    let currentSentence = '';
+    let typingHistory = [];
+    let sentenceHistory = [];
+    let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
+    let currentVolume = 0.5;
         
         const backgrounds = [
             { element: null, icon: createRectIcon(), name: 'none' },
@@ -1145,24 +1151,135 @@
             }
         }
         
-        // Render history list
-        function renderHistory() {
+        // Render word history only
+        function renderWordHistory() {
             if (typingHistory.length === 0) {
                 historyList.innerHTML = '<div class="history-empty" style="color: #999; font-style: italic; padding: 40px 20px; text-align: center;">No words typed yet. Start typing to build your history!</div>';
             } else {
-                // Join all words into a continuous paragraph, showing corrections
-                const paragraph = typingHistory
+                let html = '';
+                html += '<div>';
+                html += typingHistory
                     .map(item => {
                         if (item.original && item.original !== item.text) {
-                            // Show both original and corrected
-                            return `<span style="color: #ff6b6b; text-decoration: line-through;">${item.original}</span> <span style="color: #51cf66;">${item.text}</span>`;
+                            return `<span style=\"color: #ff6b6b; text-decoration: line-through;\">${item.original}</span> <span style=\"color: #51cf66;\">${item.text}</span>`;
                         } else {
                             return item.text;
                         }
                     })
                     .join(' ');
-                historyList.innerHTML = paragraph;
+                html += '</div>';
+                historyList.innerHTML = html;
             }
+        }
+
+        // Render sentence revision history only
+        function renderSentenceHistory() {
+            const sentenceList = document.getElementById('sentence-list');
+            if (sentenceHistory.length === 0) {
+                sentenceList.innerHTML = '<div class="history-empty" style="color: #999; font-style: italic; padding: 40px 20px; text-align: center;">No revised sentences yet. Type a sentence ending with a period to see revisions!</div>';
+            } else {
+                let html = '';
+                html += '<div>';
+                html += sentenceHistory.map(item => {
+                    // Show revised sentence in italic Times New Roman, black, no highlight
+                    return `<span style=\"font-family:'Times New Roman',serif; font-style:italic; color:#000; margin-right:8px;\">${item.text}</span>`;
+                }).join(' ');
+                html += '</div>';
+                sentenceList.innerHTML = html;
+            }
+        }
+
+        // Tab switching logic
+        const tabWordHistory = document.getElementById('tab-word-history');
+        const tabSentenceRevision = document.getElementById('tab-sentence-revision');
+        const sentenceList = document.getElementById('sentence-list');
+        tabWordHistory.addEventListener('click', function() {
+            tabWordHistory.style.background = '#1976d2';
+            tabWordHistory.style.color = '#fff';
+            tabSentenceRevision.style.background = '#fff';
+            tabSentenceRevision.style.color = '#1976d2';
+            tabSentenceRevision.style.border = '1px solid #1976d2';
+            historyList.style.display = '';
+            sentenceList.style.display = 'none';
+            renderWordHistory();
+        });
+        tabSentenceRevision.addEventListener('click', function() {
+            tabSentenceRevision.style.background = '#1976d2';
+            tabSentenceRevision.style.color = '#fff';
+            tabWordHistory.style.background = '#fff';
+            tabWordHistory.style.color = '#1976d2';
+            tabWordHistory.style.border = '1px solid #1976d2';
+            historyList.style.display = 'none';
+            sentenceList.style.display = '';
+            renderSentenceHistory();
+        });
+
+        // When opening modal, default to word history
+        function renderHistory() {
+            tabWordHistory.click();
+        }
+        // Add sentence to history with DeepSeek revision
+        async function addSentenceToHistory(sentence) {
+            if (sentence.trim().length > 0) {
+                try {
+                    const revised = await autoReviseSentence(sentence.trim());
+                    sentenceHistory.push({
+                        text: revised,
+                        timestamp: new Date().toISOString()
+                    });
+                    saveHistory();
+                    console.log(`Sentence revised: ${sentence} → ${revised}`);
+                } catch (error) {
+                    sentenceHistory.push({
+                        text: sentence,
+                        timestamp: new Date().toISOString()
+                    });
+                    saveHistory();
+                    console.log(`Saved original sentence to history: ${sentence}`);
+                }
+            }
+        }
+
+        // DeepSeek sentence revision
+        async function autoReviseSentence(sentence) {
+            // Check if API key is set
+            if (DEEPSEEK_CONFIG.apiKey === 'YOUR_DEEPSEEK_API_KEY' || !DEEPSEEK_CONFIG.apiKey) {
+                // Fallback: return sentence unchanged
+                return sentence;
+            }
+            try {
+                const revised = await callDeepSeekSentenceRevision(sentence);
+                return revised;
+            } catch (error) {
+                return sentence;
+            }
+        }
+
+        async function callDeepSeekSentenceRevision(sentence) {
+            const response = await fetch(DEEPSEEK_CONFIG.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${DEEPSEEK_CONFIG.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: DEEPSEEK_CONFIG.model,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: `Please check and revise this sentence for grammar, spelling, and clarity. If it is already correct, return it unchanged. Sentence: \"${sentence}\". Return only the revised sentence, nothing else.`
+                        }
+                    ],
+                    max_tokens: 100,
+                    temperature: 0.3
+                })
+            });
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+            const data = await response.json();
+            const revised = data.choices[0].message.content.trim();
+            return revised || sentence;
         }
         
         // Toggle history modal
@@ -1696,40 +1813,56 @@
         // Handle typing
         document.addEventListener('keypress', function(e) {
             if (e.target.tagName === 'INPUT') return;
-            
             const char = e.key;
             if (char.length !== 1) return;
-            
+
             // Reset on space and save current word with auto-correction
             if (char === ' ') {
                 if (currentWord.length > 0) {
-                    // Auto-correct and save to history
                     addToHistory(currentWord.trim());
                     currentWord = '';
                 }
+                currentSentence += ' ';
                 charPosition = 0;
                 return;
             }
-            
-            // Add character to current word
+
+            // Add character to current word and sentence
             currentWord += char;
-            
+            currentSentence += char;
+
             clearTimeout(resetTimeout);
             createFloatingText(char, charPosition);
             charPosition++;
-            
+
+            // If period, treat as end of sentence
+            if (char === '.') {
+                // Save current word if any
+                if (currentWord.length > 0) {
+                    addToHistory(currentWord.trim());
+                    currentWord = '';
+                }
+                // Save sentence for revision
+                const sentenceToCheck = currentSentence.trim();
+                if (sentenceToCheck.length > 0) {
+                    addSentenceToHistory(sentenceToCheck);
+                }
+                currentSentence = '';
+                charPosition = 0;
+                return;
+            }
+
             // Auto-reset after 1 second of no typing with auto-correction
             resetTimeout = setTimeout(async () => {
                 if (currentWord.length > 0) {
-                    // Auto-correct and save to history
                     await addToHistory(currentWord.trim());
                     currentWord = '';
                 }
                 charPosition = 0;
-            }, 1000); // Increased to 1 second for better auto-correction
+            }, 1000);
         });
         
-        // Reset position on Enter and save word
+        // Reset position on Enter and save word/sentence
         document.addEventListener('keydown', function(e) {
             // Tab to toggle history
             if (e.key === 'Tab') {
@@ -1737,12 +1870,15 @@
                 toggleHistory();
                 return;
             }
-            
+
             if (e.key === 'Enter') {
                 if (currentWord.length > 0) {
-                    // Auto-correct and save to history
                     addToHistory(currentWord.trim());
                     currentWord = '';
+                }
+                if (currentSentence.trim().length > 0) {
+                    addSentenceToHistory(currentSentence.trim());
+                    currentSentence = '';
                 }
                 charPosition = 0;
             }
