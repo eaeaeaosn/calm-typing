@@ -49,6 +49,16 @@ if (isProduction && process.env.DATABASE_URL) {
     },
     
     run: (query, params, callback) => {
+      if (!callback) {
+        // Handle case where no callback is provided
+        pool.query(query, params, (err, result) => {
+          if (err) {
+            console.error('PostgreSQL run error:', err);
+          }
+        });
+        return;
+      }
+      
       pool.query(query, params, (err, result) => {
         if (err) {
           console.error('PostgreSQL run error:', err);
@@ -63,8 +73,12 @@ if (isProduction && process.env.DATABASE_URL) {
     
     exec: (query, callback) => {
       pool.query(query, (err, result) => {
-        if (err) return callback(err);
-        callback(null);
+        if (err) {
+          console.error('PostgreSQL exec error:', err);
+          if (callback) return callback(err);
+          return;
+        }
+        if (callback) callback(null);
       });
     }
   };
