@@ -142,7 +142,7 @@ const authenticateGuest = (req, res, next) => {
 };
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '.')));
 
 // API Routes
 
@@ -353,6 +353,11 @@ app.post('/api/guest/data/:dataType', authenticateGuest, (req, res) => {
       }
     );
   });
+});
+
+// Serve the authentication page
+app.get('/auth', (req, res) => {
+  res.sendFile(path.join(__dirname, 'auth.html'));
 });
 
 // Serve the main application

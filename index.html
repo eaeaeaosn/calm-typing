@@ -1299,8 +1299,8 @@
                 isGuest = true;
                 updateAuthUI();
             } else {
-                // No authentication - create a guest session automatically
-                createGuestSession();
+                // No authentication - redirect to auth page
+                window.location.href = '/auth';
                 return;
             }
             
@@ -1392,11 +1392,11 @@
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
             localStorage.removeItem('guestId');
-            window.location.href = '/auth.html';
+            window.location.href = '/auth';
         }
         
         function switchToAuth() {
-            window.location.href = '/auth.html';
+            window.location.href = '/auth';
         }
         
         async function loadUserSettings() {
