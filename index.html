@@ -100,7 +100,7 @@
         #volume-control {
             position: fixed;
             top: 20px;
-            right: 370px;
+            right: 430px;
             width: 50px;
             height: 50px;
             background: rgba(200, 200, 200, 0.95);
@@ -122,14 +122,14 @@
         }
         
         #controls.collapsed ~ #volume-control {
-            right: 140px;
+            right: 200px;
         }
 
         /* Fish toggle - match style of other top-right controls */
         #fish-toggle {
             position: fixed;
             top: 20px;
-            right: 430px;
+            right: 370px;
             width: 50px;
             height: 50px;
             background: rgba(200, 200, 200, 0.95);
@@ -143,17 +143,16 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            font-size: 24px;
+            font-size: 0; /* icon only */
         }
 
         #fish-toggle:hover {
             background: rgba(180, 180, 180, 0.95);
             transform: scale(1.05);
-            
         }
 
         #controls.collapsed ~ #fish-toggle {
-            right: 200px;
+            right: 140px;
         }
 
         /* Active state for fish toggle */
@@ -949,7 +948,13 @@
         </svg>
     </button>
 
-    <button id="fish-toggle" title="Toggle Fish">🐟</button>
+    <button id="fish-toggle" title="Toggle Fish">
+        <!-- Inlined project fish icon (scaled by .icon-svg). Body uses currentColor so it matches other icons; eye kept white for contrast. -->
+        <svg class="icon-svg" viewBox="0 0 433.46 132.8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+            <path d="M.04,62.77c3.17-30.21,185.19-73.94,312.12-1.77,49.1,27.92,78.55,66.69,101.06,55.15,29.26-15.02,25.42-104.13-2.77-115.09-30.9-12.01-60.71,81.6-149.8,117.19C147.29,163.53-2.94,91.26.04,62.77Z" fill="currentColor"/>
+            <circle cx="55.54" cy="55.38" r="6.25" fill="#fff" />
+        </svg>
+    </button>
     <button id="audio-control" title="Toggle Music">♪</button>
     <audio id="bg-audio" preload="auto" loop></audio>
     
