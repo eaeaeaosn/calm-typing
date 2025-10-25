@@ -8,10 +8,21 @@ let db;
 if (isProduction && process.env.DATABASE_URL) {
   // Production: Use PostgreSQL
   console.log('Using PostgreSQL database');
+  console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+  
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
+    }
+  });
+  
+  // Test the connection
+  pool.query('SELECT NOW()', (err, result) => {
+    if (err) {
+      console.error('PostgreSQL connection error:', err);
+    } else {
+      console.log('PostgreSQL connected successfully:', result.rows[0]);
     }
   });
   
@@ -34,7 +45,9 @@ if (isProduction && process.env.DATABASE_URL) {
     run: (query, params, callback) => {
       pool.query(query, params, (err, result) => {
         if (err) return callback(err);
-        callback(null, { lastID: result.insertId, changes: result.rowCount });
+        // For PostgreSQL, we need to get the last inserted ID differently
+        const lastID = result.rows && result.rows[0] ? result.rows[0].id : null;
+        callback(null, { lastID: lastID, changes: result.rowCount });
       });
     },
     
@@ -95,8 +108,8 @@ const initDatabase = () => {
   `;
 
   if (isProduction) {
-    // For PostgreSQL, we need to handle the schema differently
-    const pgCreateTables = `
+    // For PostgreSQL, create tables one by one
+    const createUsersTable = `
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
@@ -106,13 +119,17 @@ const initDatabase = () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_login TIMESTAMP
       );
-      
+    `;
+    
+    const createGuestSessionsTable = `
       CREATE TABLE IF NOT EXISTS guest_sessions (
         id TEXT PRIMARY KEY,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-      
+    `;
+    
+    const createTypingHistoryTable = `
       CREATE TABLE IF NOT EXISTS typing_history (
         id SERIAL PRIMARY KEY,
         user_id TEXT,
@@ -124,7 +141,9 @@ const initDatabase = () => {
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (guest_id) REFERENCES guest_sessions(id)
       );
-      
+    `;
+    
+    const createUserSettingsTable = `
       CREATE TABLE IF NOT EXISTS user_settings (
         id SERIAL PRIMARY KEY,
         user_id TEXT,
@@ -137,12 +156,37 @@ const initDatabase = () => {
       );
     `;
     
-    db.exec(pgCreateTables, (err) => {
+    // Create tables sequentially
+    db.exec(createUsersTable, (err) => {
       if (err) {
-        console.error('Error creating PostgreSQL tables:', err);
-      } else {
-        console.log('PostgreSQL database initialized');
+        console.error('Error creating users table:', err);
+        return;
       }
+      console.log('Users table created');
+      
+      db.exec(createGuestSessionsTable, (err) => {
+        if (err) {
+          console.error('Error creating guest_sessions table:', err);
+          return;
+        }
+        console.log('Guest sessions table created');
+        
+        db.exec(createTypingHistoryTable, (err) => {
+          if (err) {
+            console.error('Error creating typing_history table:', err);
+            return;
+          }
+          console.log('Typing history table created');
+          
+          db.exec(createUserSettingsTable, (err) => {
+            if (err) {
+              console.error('Error creating user_settings table:', err);
+              return;
+            }
+            console.log('PostgreSQL database initialized successfully');
+          });
+        });
+      });
     });
   } else {
     db.exec(createTables, (err) => {
