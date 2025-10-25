@@ -22,6 +22,69 @@ body {
     z-index: -2;
 }
 
+/* 鱼的总容器：覆盖全屏、透明、不挡交互 */
+#fish-layer {
+  position: fixed;          /* 固定在屏幕上 */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;     /* 不影响鼠标/点击 */
+  overflow: hidden;         /* 防止鱼飘出去还占空间 */
+  z-index: 999;             /* 保证在最上层 */
+}
+
+/* 每条鱼的基础样式 */
+.fish {
+  position: absolute;       /* 允许我们自由定位每条鱼 */
+  font-size: 2rem;          /* 鱼的大小：可以随机调整 */
+  opacity: 1;               /* 刚出现时完全可见 */
+  animation: fish-float 2s ease-out forwards; 
+  /* ↑ 动画名字:fish-float  时长2s   渐慢停止  动完保留最后一帧 */
+  will-change: transform, opacity; /* 提升性能 */
+}
+
+/* 动画关键帧：往上漂 + 渐隐 */
+@keyframes fish-float {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(30px, -100px) scale(1.1) rotate(5deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(80px, -200px) scale(1.2) rotate(10deg);
+    opacity: 0;
+  }
+}
+
+/* 可选：第二种动画，弧线游动 */
+@keyframes fish-arc {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(60px, -100px) rotate(10deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(120px, -200px) rotate(20deg);
+    opacity: 0;
+  }
+}
+
+/* 可选：稀有鱼（金鱼）特效 */
+.fish.shark {
+  font-size: 3.2rem;        /* 缩小鲨鱼 */
+  animation-duration: 2s;   /* 加快动画速度 */
+  text-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  transform-origin: center;
+}
+
+
 .waves {
     position: absolute;
     bottom: 0;

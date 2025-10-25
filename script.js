@@ -7,6 +7,7 @@ class CalmTyping {
         this.sentenceContainer = document.getElementById('sentenceContainer');
         this.backgroundMusic = document.getElementById('backgroundMusic');
         this.musicToggle = document.getElementById('musicToggle');
+        this.typingInput = document.getElementById('typingInput');
         
         this.typedLetters = [];
         this.typedWords = [];
@@ -27,9 +28,20 @@ class CalmTyping {
     init() {
         this.setupEventListeners();
         this.startBackgroundMusic();
-        // Focus on the page to capture keyboard input
-        document.body.focus();
-        document.body.tabIndex = -1;
+        // Focus management: prefer input if present, otherwise focus body
+        if (this.typingInput) {
+            this.typingInput.focus();
+        } else {
+            document.body.focus();
+            document.body.tabIndex = -1;
+        }
+        // Configure fish effect if available
+        if (window.FishFX && typeof FishFX.config === 'function') {
+            FishFX.config({
+                maxConcurrency: 15,
+                fishEmojis: ['🐠', '🐟', '🐡']
+            });
+        }
     }
     
     setupEventListeners() {
@@ -80,6 +92,7 @@ class CalmTyping {
                 }
                 break;
         }
+        if (window.FishFX) window.FishFX.onKeydown(e);
     }
     
     handleLetter(letter) {
