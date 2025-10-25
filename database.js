@@ -49,25 +49,16 @@ if (isProduction && process.env.DATABASE_URL) {
     },
     
     run: (query, params, callback) => {
-      if (!callback) {
-        // Handle case where no callback is provided
-        pool.query(query, params, (err, result) => {
-          if (err) {
-            console.error('PostgreSQL run error:', err);
-          }
-        });
-        return;
-      }
-      
       pool.query(query, params, (err, result) => {
         if (err) {
           console.error('PostgreSQL run error:', err);
-          return callback(err);
+          if (callback) return callback(err);
+          return;
         }
         // For PostgreSQL, we need to get the last inserted ID differently
         const lastID = result.rows && result.rows[0] ? result.rows[0].id : null;
         const changes = result.rowCount || 0;
-        callback(null, { lastID: lastID, changes: changes });
+        if (callback) callback(null, { lastID: lastID, changes: changes });
       });
     },
     
