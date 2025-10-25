@@ -483,13 +483,22 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
-  db.close((err) => {
-    if (err) {
-      console.error(err.message);
-    }
-    console.log('Database connection closed');
-    process.exit(0);
-  });
+  if (process.env.NODE_ENV === 'production') {
+    // PostgreSQL - end the pool
+    db.end(() => {
+      console.log('PostgreSQL pool closed');
+      process.exit(0);
+    });
+  } else {
+    // SQLite - close the database
+    db.close((err) => {
+      if (err) {
+        console.error(err.message);
+      }
+      console.log('SQLite database connection closed');
+      process.exit(0);
+    });
+  }
 });
 
 module.exports = app;
