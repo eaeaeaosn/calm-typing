@@ -14,6 +14,8 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -153,20 +155,24 @@ const formatStLouisTime = (dateString) => {
 };
 
 // Admin endpoint to view users (for development/testing)
-app.get('/api/admin/users', (req, res) => {
-  db.all('SELECT id, username, email, is_guest, created_at, last_login FROM users ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    // Format timestamps to St. Louis timezone
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const query = 'SELECT id, username, email, is_guest, created_at, last_login FROM users ORDER BY created_at DESC';
+
+    const rows = process.env.NODE_ENV === 'production'
+      ? (await db.query(query)).rows  // PostgreSQL
+      : await new Promise((resolve, reject) => { // SQLite
+          db.all(query, (err, rows) => err ? reject(err) : resolve(rows));
+        });
+
+    // Format timestamps
     const formattedRows = rows.map(row => ({
       ...row,
       created_at: formatStLouisTime(row.created_at),
       last_login: formatStLouisTime(row.last_login)
     }));
-    
-    res.json({ 
+
+    res.json({
       users: formattedRows,
       total: rows.length,
       timestamp: new Date().toLocaleString('en-US', {
@@ -181,24 +187,30 @@ app.get('/api/admin/users', (req, res) => {
       }),
       timezone: 'America/Chicago (St. Louis)'
     });
-  });
+  } catch (err) {
+    console.error('Admin users error:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Admin endpoint to view guest sessions
-app.get('/api/admin/guests', (req, res) => {
-  db.all('SELECT id, created_at, last_activity FROM guest_sessions ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    // Format timestamps to St. Louis timezone
+app.get('/api/admin/guests', async (req, res) => {
+  try {
+    const query = 'SELECT id, created_at, last_activity FROM guest_sessions ORDER BY created_at DESC';
+
+    const rows = process.env.NODE_ENV === 'production'
+      ? (await db.query(query)).rows  // PostgreSQL
+      : await new Promise((resolve, reject) => { // SQLite
+          db.all(query, (err, rows) => err ? reject(err) : resolve(rows));
+        });
+
     const formattedRows = rows.map(row => ({
       ...row,
       created_at: formatStLouisTime(row.created_at),
       last_activity: formatStLouisTime(row.last_activity)
     }));
-    
-    res.json({ 
+
+    res.json({
       guests: formattedRows,
       total: rows.length,
       timestamp: new Date().toLocaleString('en-US', {
@@ -213,7 +225,10 @@ app.get('/api/admin/guests', (req, res) => {
       }),
       timezone: 'America/Chicago (St. Louis)'
     });
-  });
+  } catch (err) {
+    console.error('Admin guests error:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // User registration
