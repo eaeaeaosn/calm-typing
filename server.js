@@ -113,6 +113,21 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Database test endpoint
+app.get('/api/test-db', (req, res) => {
+  db.get('SELECT NOW() as current_time', [], (err, result) => {
+    if (err) {
+      console.error('Database test error:', err);
+      return res.status(500).json({ error: 'Database connection failed', details: err.message });
+    }
+    res.json({ 
+      status: 'Database connected', 
+      current_time: result.current_time,
+      timestamp: new Date().toISOString()
+    });
+  });
+});
+
 // Helper function to format timestamps to St. Louis timezone
 const formatStLouisTime = (dateString) => {
   if (!dateString) return null;

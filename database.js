@@ -56,7 +56,8 @@ if (isProduction && process.env.DATABASE_URL) {
         }
         // For PostgreSQL, we need to get the last inserted ID differently
         const lastID = result.rows && result.rows[0] ? result.rows[0].id : null;
-        callback(null, { lastID: lastID, changes: result.rowCount });
+        const changes = result.rowCount || 0;
+        callback(null, { lastID: lastID, changes: changes });
       });
     },
     
