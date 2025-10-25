@@ -659,6 +659,92 @@
             text-shadow: 0 4px 8px rgba(0,0,0,0.5);
             transform-origin: center;
         }
+
+        /* Personal sidebar styles */
+        #personal-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 320px;
+            max-width: 80%;
+            background: rgba(255,255,255,0.98);
+            /* hidden state: no shadow and fully translated off-screen */
+            box-shadow: none;
+            transform: translateX(-100%);
+            transition: transform 0.28s ease, opacity 0.28s ease;
+            z-index: 1500;
+            display: flex;
+            align-items: stretch;
+            pointer-events: none; /* disable while hidden */
+            overflow: hidden;
+        }
+
+        #personal-sidebar.show {
+            transform: translateX(0);
+            box-shadow: 2px 0 18px rgba(0,0,0,0.12);
+            pointer-events: auto;
+        }
+
+        #personal-sidebar-inner { padding: 18px; width:100%; display:flex; flex-direction:column; }
+        #personal-sidebar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+        #personal-list { overflow:auto; flex:1; padding-right:6px; }
+        .personal-item { padding:8px 10px; border-radius:8px; cursor:pointer; margin-bottom:8px; background:transparent; transition:background 0.12s; }
+        .personal-item:hover { background: rgba(0,0,0,0.04); }
+        .personal-item-title { font-weight:600; color:#111; }
+        .personal-item-time { font-size:12px; color:#666; }
+        #personal-detail { margin-top:12px; border-top:1px solid #eee; padding-top:12px; }
+        #sidebar-close { background:transparent; border:none; font-size:16px; cursor:pointer; color:#666; }
+
+        /* Hide the sidebar when not active via aria-hidden */
+        #personal-sidebar[aria-hidden="true"] { opacity: 0.98; }
+
+        /* Left edge toggle and sensor */
+        #personal-sidebar-toggle {
+            position: fixed;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%) translateX(-6px);
+            width: 36px;
+            height: 56px;
+            background: rgba(255,255,255,0.0); /* visually hidden */
+            border-radius: 8px;
+            border: none;
+            box-shadow: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1600;
+            cursor: pointer;
+            transition: transform 0.18s ease, opacity 0.18s ease;
+            padding-left: 4px;
+            opacity: 0; /* start fully hidden */
+            pointer-events: none; /* avoid accidental clicks when hidden */
+        }
+
+        /* When sidebar is visible, reveal the chevron briefly */
+        #personal-sidebar.show ~ #personal-sidebar-toggle {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            pointer-events: auto;
+        }
+
+        /* When sidebar is open, rotate the chevron */
+        #personal-sidebar.show ~ #personal-sidebar-toggle svg { transform: rotate(180deg); transition: transform 0.18s ease; }
+
+        /* Hidden larger invisible sensor area for extra sensitivity */
+        #left-sensor-area {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 140px; /* more sensitive: 140px wide activation area */
+            height: 100vh;
+            z-index: 1550;
+            pointer-events: none; /* allow clicks to pass through, we'll use mousemove on document */
+        }
     </style>
 </head>
 <body>
@@ -935,6 +1021,32 @@
     </div>
     
     <div id="canvas-container"></div>
+    
+    <!-- Personal History Sidebar -->
+    <aside id="personal-sidebar" aria-hidden="true">
+        <div id="personal-sidebar-inner">
+            <div id="personal-sidebar-header">
+                <strong>Personal History</strong>
+                <button id="sidebar-close" title="Close" aria-label="Close">✕</button>
+            </div>
+            <div id="personal-list" role="list"></div>
+            <div id="personal-detail" aria-live="polite">
+                <div id="personal-detail-title"></div>
+                <div id="personal-detail-time" style="font-size:12px;color:#666;margin-bottom:8px;"></div>
+                <div id="personal-detail-text" style="font-family:'Times New Roman',serif; font-style:italic; color:#000; white-space:pre-wrap;"></div>
+                <div style="margin-top:12px; display:flex; gap:8px;">
+                    <button id="personal-delete" class="history-btn clear">Delete</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <!-- Sidebar toggle (small angle icon) -->
+    <button id="personal-sidebar-toggle" title="Open personal history" aria-label="Open personal history">
+        <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="8 4 16 12 8 20" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+    </button>
+    <div id="left-sensor-area" aria-hidden="true"></div>
     
     <button id="background-toggle" title="Change Background">
         <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1314,6 +1426,228 @@
         
         // Load history on startup
         loadHistory();
+
+        // --- Personal history (sidebar) storage & UI ---
+        let personalHistory = [];
+
+        function loadPersonalHistory() {
+            try {
+                const raw = localStorage.getItem('personalHistory');
+                personalHistory = raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                personalHistory = [];
+            }
+        }
+
+        function savePersonalHistory() {
+            try {
+                localStorage.setItem('personalHistory', JSON.stringify(personalHistory));
+            } catch (e) {
+                console.warn('Failed to save personal history', e);
+            }
+        }
+
+        function renderPersonalList() {
+            const listEl = document.getElementById('personal-list');
+            listEl.innerHTML = '';
+            if (personalHistory.length === 0) {
+                listEl.innerHTML = '<div class="history-empty">No personal entries yet. Save a revised sentence with Cmd/Ctrl+Enter.</div>';
+                document.getElementById('personal-detail-title').textContent = '';
+                document.getElementById('personal-detail-text').textContent = '';
+                document.getElementById('personal-detail-time').textContent = '';
+                return;
+            }
+            personalHistory.slice().reverse().forEach(entry => {
+                const item = document.createElement('div');
+                item.className = 'personal-item';
+                item.dataset.id = entry.id;
+                item.innerHTML = `<div class=\"personal-item-title\">${entry.title}</div><div class=\"personal-item-time\">${new Date(entry.timestamp).toLocaleString()}</div>`;
+                item.addEventListener('click', () => selectPersonalEntry(entry.id));
+                listEl.appendChild(item);
+            });
+        }
+
+        function selectPersonalEntry(id) {
+            const entry = personalHistory.find(e => e.id === id);
+            if (!entry) return;
+            document.getElementById('personal-detail-title').textContent = entry.title;
+            document.getElementById('personal-detail-time').textContent = new Date(entry.timestamp).toLocaleString();
+            document.getElementById('personal-detail-text').textContent = entry.text;
+            // attach delete behavior
+            document.getElementById('personal-delete').onclick = function() {
+                if (!confirm('Delete this entry?')) return;
+                personalHistory = personalHistory.filter(e => e.id !== id);
+                savePersonalHistory();
+                renderPersonalList();
+                document.getElementById('personal-detail-title').textContent = '';
+                document.getElementById('personal-detail-text').textContent = '';
+                document.getElementById('personal-detail-time').textContent = '';
+            };
+        }
+
+        // Try to generate a short title via DeepSeek; fallback to a truncated phrase
+        async function generateTitleForSentence(sentence) {
+            // If no API key, fallback
+            if (DEEPSEEK_CONFIG.apiKey === 'YOUR_DEEPSEEK_API_KEY' || !DEEPSEEK_CONFIG.apiKey) {
+                return fallbackTitle(sentence);
+            }
+            try {
+                const response = await fetch(DEEPSEEK_CONFIG.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DEEPSEEK_CONFIG.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: DEEPSEEK_CONFIG.model,
+                        messages: [{ role: 'user', content: `Create a short, descriptive title (3-6 words) for this sentence: "${sentence}". Return only the title.` }],
+                        max_tokens: 30,
+                        temperature: 0.2
+                    })
+                });
+                if (!response.ok) throw new Error('Title API failed');
+                const data = await response.json();
+                const title = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? data.choices[0].message.content.trim() : null;
+                if (title) return title;
+                return fallbackTitle(sentence);
+            } catch (e) {
+                return fallbackTitle(sentence);
+            }
+        }
+
+        function fallbackTitle(sentence) {
+            const words = sentence.replace(/[.?!]/g, '').split(/\s+/).filter(Boolean);
+            const t = words.slice(0, 6).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            return t || 'Saved Entry';
+        }
+
+        // Save all revised sentences (prior to the command) as personal history entries
+        async function saveAllRevisedSentencesAsPersonal() {
+            if (!sentenceHistory || sentenceHistory.length === 0) {
+                alert('No revised sentences available to save.');
+                return;
+            }
+            // Make a shallow copy of sentences to process
+            const toSave = sentenceHistory.slice();
+
+            for (const s of toSave) {
+                const text = (s && s.text) ? s.text : String(s);
+                const title = await generateTitleForSentence(text);
+                const entry = { id: String(Date.now()) + Math.random().toString(36).slice(2,8), title, text, timestamp: new Date().toISOString() };
+                personalHistory.push(entry);
+            }
+
+            // Persist and render
+            savePersonalHistory();
+            renderPersonalList();
+
+            // Remove loaded content from typingHistory (word-level history) by matching words
+            try {
+                toSave.forEach(s => {
+                    const text = (s && s.text) ? s.text : String(s || '');
+                    const words = text.replace(/[.?,!;:()"']/g, '').split(/\s+/).filter(Boolean);
+                    words.forEach(w => {
+                        const idx = typingHistory.findIndex(item => item && (item.text === w || (item.original && item.original === w)));
+                        if (idx !== -1) {
+                            typingHistory.splice(idx, 1);
+                        }
+                    });
+                });
+                saveHistory();
+            } catch (e) {
+                console.warn('Failed to remove words from typingHistory after moving sentences:', e);
+            }
+
+            // Clear sentenceHistory and update UI
+            sentenceHistory = [];
+            renderSentenceHistory();
+
+            // Show sidebar and select the most recently added entry
+            showPersonalSidebar();
+            if (personalHistory.length) {
+                const last = personalHistory[personalHistory.length - 1];
+                selectPersonalEntry(last.id);
+            }
+        }
+
+        // Keyboard handler: Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) -> batch save
+        document.addEventListener('keydown', function(e) {
+            const isCmdEnter = (e.metaKey && e.key === 'Enter');
+            const isCtrlEnter = (e.ctrlKey && e.key === 'Enter');
+            if (isCmdEnter || isCtrlEnter) {
+                e.preventDefault();
+                saveAllRevisedSentencesAsPersonal();
+            }
+        });
+
+        // Sidebar show/hide interaction
+        const sidebar = document.getElementById('personal-sidebar');
+        const sidebarToggle = document.getElementById('personal-sidebar-toggle');
+        let sidebarHideTimer = null;
+
+        function showPersonalSidebar() {
+            if (!sidebar) return;
+            sidebar.classList.add('show');
+            sidebar.setAttribute('aria-hidden', 'false');
+            if (sidebarHideTimer) clearTimeout(sidebarHideTimer);
+            // update chevron rotation state visually
+            if (sidebarToggle) sidebarToggle.classList.add('open');
+        }
+
+        function hidePersonalSidebar() {
+            if (!sidebar) return;
+            sidebar.classList.remove('show');
+            sidebar.setAttribute('aria-hidden', 'true');
+            if (sidebarToggle) sidebarToggle.classList.remove('open');
+        }
+
+        // More sensitive show/hide behavior: show when mouse is near the left edge (sensor width)
+        const SIDEBAR_SENSOR_WIDTH = 140; // px from left edge
+        const SIDEBAR_HIDE_DELAY_MS = 180; // quick hide after leaving
+        let lastMouseX = null;
+
+        document.addEventListener('mousemove', function(evt) {
+            try {
+                lastMouseX = evt.clientX;
+                if (evt.clientX <= SIDEBAR_SENSOR_WIDTH) {
+                    // entered sensor area -> show immediately
+                    showPersonalSidebar();
+                    if (sidebarHideTimer) { clearTimeout(sidebarHideTimer); sidebarHideTimer = null; }
+                    return;
+                }
+
+                // If cursor moved outside sensor and sidebar is open, start a short hide timer
+                if (sidebar && sidebar.classList.contains('show')) {
+                    if (sidebarHideTimer) clearTimeout(sidebarHideTimer);
+                    sidebarHideTimer = setTimeout(() => {
+                        // Only hide if mouse still outside sensor and not inside sidebar
+                        try {
+                            if ((lastMouseX || 0) > SIDEBAR_SENSOR_WIDTH) {
+                                hidePersonalSidebar();
+                            }
+                        } catch (e) { hidePersonalSidebar(); }
+                    }, SIDEBAR_HIDE_DELAY_MS);
+                }
+            } catch (e) { /* ignore in odd environments */ }
+        });
+
+        if (sidebarToggle) {
+            // Hovering or clicking the small angle icon shows/hides the sidebar
+            sidebarToggle.addEventListener('mouseenter', function() { showPersonalSidebar(); });
+            sidebarToggle.addEventListener('click', function() {
+                if (sidebar && sidebar.classList.contains('show')) hidePersonalSidebar(); else showPersonalSidebar();
+            });
+        }
+
+        if (sidebar) {
+            sidebar.addEventListener('mouseenter', function() { if (sidebarHideTimer) { clearTimeout(sidebarHideTimer); sidebarHideTimer = null; } });
+            sidebar.addEventListener('mouseleave', function() { sidebarHideTimer = setTimeout(hidePersonalSidebar, SIDEBAR_HIDE_DELAY_MS); });
+            document.getElementById('sidebar-close').addEventListener('click', hidePersonalSidebar);
+        }
+
+        // Load personal history initially
+        loadPersonalHistory();
+        renderPersonalList();
         
         // DeepSeek API functions
         async function autoCorrectWord(word) {
