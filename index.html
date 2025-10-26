@@ -3728,13 +3728,27 @@
         
         // Toggle background on click
         backgroundToggle.addEventListener('click', function() {
-            // Add rotation animation
+            // Add rotation animation 
             backgroundToggle.classList.add('rotating');
             setTimeout(() => {
                 backgroundToggle.classList.remove('rotating');
             }, 500);
             
-            cycleBackground_withAudio();
+            // Check if custom music is uploaded
+            if (uploadedMusic) {
+                // With custom music - use it for all backgrounds
+                cycleBackground();
+                bgAudio.src = uploadedMusic.src;
+                bgAudio.volume = currentVolume;
+                bgAudio.play().catch(() => {
+                    audioControl.classList.remove('active');
+                });
+                audioControl.classList.add('active'); 
+                audioControl.title = 'Pause Music';
+            } else {
+                // No custom music - use per-background tracks
+                cycleBackground_withAudio();
+            }
         });
         
         // Volume control toggle

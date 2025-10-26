@@ -12,6 +12,22 @@ class CalmTyping {
         this.musicToggle = document.getElementById('musicToggle');
         this.typingInput = document.getElementById('typingInput');
         
+        // Audio settings and state
+        this.defaultAudioSources = {
+            forest: 'Audios/the-sound-of-a-mountain-stream-_nature-sound-201930.mp3',
+            ocean: 'Audios/ocean-waves-376898.mp3',
+            mountain: 'Audios/15-minutes-of-rain-sound-for-relaxation-and-sleep-study-312863.mp3'
+        };
+        
+        this.customAudioSources = {
+            forest: null,
+            ocean: null,
+            mountain: null
+        };
+
+        // Load custom audio assignments from localStorage
+        this.loadAudioSettings();
+        
         this.typedLetters = [];
         this.typedWords = [];
         this.typedSentences = [];
@@ -28,6 +44,25 @@ class CalmTyping {
         this.init();
     }
     
+    loadAudioSettings() {
+        try {
+            const savedSettings = localStorage.getItem('customAudioSettings');
+            if (savedSettings) {
+                this.customAudioSources = JSON.parse(savedSettings);
+            }
+        } catch (e) {
+            console.warn('Failed to load audio settings:', e);
+        }
+    }
+
+    saveAudioSettings() {
+        try {
+            localStorage.setItem('customAudioSettings', JSON.stringify(this.customAudioSources));
+        } catch (e) {
+            console.warn('Failed to save audio settings:', e);
+        }
+    }
+
     init() {
         this.setupEventListeners();
         this.startBackgroundMusic();
@@ -69,6 +104,26 @@ class CalmTyping {
                 this.hideHistory();
             }
         });
+
+        // Audio upload and UI events
+        const audioUploadFile = document.getElementById('audio-upload-file');
+        const audioUploadUrl = document.getElementById('audio-upload-url');
+        const audioAssignBtn = document.getElementById('audio-assign-btn');
+        const audioRemoveBtn = document.getElementById('audio-remove-btn');
+        const audioBgSelect = document.getElementById('audio-bg-select');
+
+        if (audioUploadFile) {
+            audioUploadFile.addEventListener('change', (e) => this.handleAudioFileUpload(e));
+        }
+        if (audioAssignBtn) {
+            audioAssignBtn.addEventListener('click', () => this.assignCustomAudio());
+        }
+        if (audioRemoveBtn) {
+            audioRemoveBtn.addEventListener('click', () => this.removeCustomAudio());
+        }
+        if (audioBgSelect) {
+            audioBgSelect.addEventListener('change', () => this.updateAudioCurrentLabel());
+        }
     }
     
     handleKeyDown(e) {
@@ -422,12 +477,121 @@ class CalmTyping {
         }, 8000);
     }
     
+    handleAudioFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Create object URL for the uploaded file
+        const audioUrl = URL.createObjectURL(file);
+        const selectedBg = document.getElementById('audio-bg-select').value;
+        
+        if (selectedBg !== 'none') {
+            this.customAudioSources[selectedBg] = audioUrl;
+            this.saveAudioSettings();
+            this.updateAudioCurrentLabel();
+            
+            // If this background is currently active, update the audio
+            if (this.currentBackground === this.getBackgroundIndex(selectedBg)) {
+                this.updateBackgroundAudio();
+            }
+        }
+    }
+
+    assignCustomAudio() {
+        const urlInput = document.getElementById('audio-upload-url');
+        const selectedBg = document.getElementById('audio-bg-select').value;
+        
+        if (selectedBg !== 'none' && urlInput.value) {
+            // Validate URL
+            try {
+                new URL(urlInput.value);
+                this.customAudioSources[selectedBg] = urlInput.value;
+                this.saveAudioSettings();
+                this.updateAudioCurrentLabel();
+                
+                // If this background is currently active, update the audio
+                if (this.currentBackground === this.getBackgroundIndex(selectedBg)) {
+                    this.updateBackgroundAudio();
+                }
+                
+                urlInput.value = ''; // Clear input after successful assignment
+            } catch (e) {
+                alert('Please enter a valid URL');
+            }
+        }
+    }
+
+    removeCustomAudio() {
+        const selectedBg = document.getElementById('audio-bg-select').value;
+        if (selectedBg !== 'none') {
+            this.customAudioSources[selectedBg] = null;
+            this.saveAudioSettings();
+            this.updateAudioCurrentLabel();
+            
+            // If this background is currently active, revert to default audio
+            if (this.currentBackground === this.getBackgroundIndex(selectedBg)) {
+                this.updateBackgroundAudio();
+            }
+        }
+    }
+
+    getBackgroundIndex(name) {
+        switch (name) {
+            case 'forest': return 1;
+            case 'ocean': return 2;
+            case 'mountain': return 3;
+            default: return 0;
+        }
+    }
+
+    getBackgroundName(index) {
+        switch (index) {
+            case 1: return 'forest';
+            case 2: return 'ocean';
+            case 3: return 'mountain';
+            default: return 'none';
+        }
+    }
+
+    updateAudioCurrentLabel() {
+        const selectedBg = document.getElementById('audio-bg-select').value;
+        const label = document.getElementById('audio-current-label');
+        
+        if (selectedBg === 'none') {
+            label.textContent = 'Select a background to manage its music.';
+            return;
+        }
+        
+        if (this.customAudioSources[selectedBg]) {
+            label.textContent = 'Custom music assigned to ' + selectedBg;
+        } else {
+            label.textContent = 'Using default music for ' + selectedBg;
+        }
+    }
+
+    updateBackgroundAudio() {
+        const bgName = this.getBackgroundName(this.currentBackground);
+        const audioSrc = this.customAudioSources[bgName] || this.defaultAudioSources[bgName];
+        
+        if (this.backgroundMusic && audioSrc) {
+            const wasPlaying = !this.backgroundMusic.paused;
+            this.backgroundMusic.src = audioSrc;
+            if (wasPlaying) {
+                this.backgroundMusic.play().catch(console.error);
+            }
+        }
+    }
+
     startBackgroundMusic() {
-        // Try to play background music (will be muted by default due to browser autoplay policies)
-        this.backgroundMusic.volume = 0.3;
-        this.backgroundMusic.play().catch(() => {
-            console.log('Autoplay prevented. Click the music button to enable sound.');
-        });
+        // Update audio source based on current background
+        this.updateBackgroundAudio();
+        
+        if (this.backgroundMusic) {
+            this.backgroundMusic.volume = 0.3;
+            this.backgroundMusic.play().catch(() => {
+                console.log('Autoplay prevented. Click the music button to enable sound.');
+            });
+        }
     }
     
     toggleMusic() {
