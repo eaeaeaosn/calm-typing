@@ -190,7 +190,7 @@
         #volume-slider-container {
             position: fixed;
             top: 80px;
-            right: 370px;
+            right: 430px;
             width: 50px;
             height: 150px;
             background: rgba(240, 240, 240, 0.95);
@@ -1243,8 +1243,115 @@
             <circle cx="55.54" cy="55.38" r="6.25" fill="#fff" />
         </svg>
     </button>
-    <button id="audio-control" title="Toggle Music">♪</button>
-    <audio id="bg-audio" preload="auto" loop></audio>
+
+        <button id="alpha-audio-control" title="Toggle Alpha Wave Sound">
+                <span style="font-size:22px; font-family:serif;">α</span>
+        </button>
+        <button id="audio-control" title="Toggle Music">♪</button>
+        <audio id="bg-audio" preload="auto" loop></audio>
+        <audio id="alpha-audio" preload="auto" loop src="Audios/Alpha wave.mp3"></audio>
+
+        <!-- Alpha Wave Info Modal -->
+        <div id="alpha-info-modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:3000; align-items:center; justify-content:center;">
+            <div style="background:#fff; color:#222; border-radius:12px; max-width:360px; padding:28px 22px 18px 22px; box-shadow:0 8px 32px rgba(0,0,0,0.18); text-align:center; position:relative;">
+                <div style="font-size:22px; margin-bottom:10px;">α Alpha Wave Focusing Music</div>
+                <div style="font-size:15px; color:#444; margin-bottom:18px;">Alpha wave focusing music refers to soundtracks or compositions designed to help your brain enter an alpha brainwave state — a calm, relaxed, but alert condition that can enhance focus, creativity, and learning.</div>
+                <label style="display:flex; align-items:center; gap:8px; justify-content:center; font-size:13px; color:#666; margin-bottom:12px; cursor:pointer;">
+                    <input type="checkbox" id="alpha-info-never-show" style="accent-color:#1976d2;"> Never show this again
+                </label>
+                <button id="alpha-info-close" style="background:#1976d2; color:#fff; border:none; border-radius:6px; padding:7px 18px; font-size:15px; cursor:pointer;">OK</button>
+            </div>
+        </div>
+    <style>
+        #alpha-audio-control {
+            position: fixed;
+            top: 20px;
+            right: 550px;
+            width: 50px;
+            height: 50px;
+            background: rgba(200, 200, 200, 0.95);
+            border: none;
+            border-radius: 12px;
+            color: #333;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-size: 0;
+        }
+        #alpha-audio-control.active {
+            background: #1976d2;
+            color: #fff;
+        }
+        #alpha-audio-control:hover {
+            background: rgba(120,160,240,0.95);
+            color: #fff;
+            transform: scale(1.05);
+        }
+        #controls.collapsed ~ #alpha-audio-control { right: 310px; }
+        @media (max-width: 700px) {
+            #alpha-audio-control { right: 100px; }
+        }
+    </style>
+        <script>
+        // Alpha Wave Sound logic
+        const alphaAudioControl = document.getElementById('alpha-audio-control');
+        const alphaAudio = document.getElementById('alpha-audio');
+        const alphaInfoModal = document.getElementById('alpha-info-modal');
+        const alphaInfoClose = document.getElementById('alpha-info-close');
+        const alphaInfoNeverShow = document.getElementById('alpha-info-never-show');
+        let alphaAudioOn = false;
+        // Check never show
+        let neverShowAlphaInfo = localStorage.getItem('neverShowAlphaInfo') === '1';
+        function showAlphaInfo() {
+            if (!neverShowAlphaInfo) alphaInfoModal.style.display = 'flex';
+        }
+        if (alphaAudioControl) {
+            alphaAudioControl.addEventListener('click', function() {
+                if (!alphaAudioOn) {
+                    // Show info if not never show
+                    if (!neverShowAlphaInfo) {
+                        showAlphaInfo();
+                        return;
+                    }
+                }
+                alphaAudioOn = !alphaAudioOn;
+                if (alphaAudioOn) {
+                    alphaAudioControl.classList.add('active');
+                    alphaAudio.volume = 0.5;
+                    alphaAudio.play();
+                } else {
+                    alphaAudioControl.classList.remove('active');
+                    alphaAudio.pause();
+                    alphaAudio.currentTime = 0;
+                }
+            });
+        }
+        if (alphaInfoClose) {
+            alphaInfoClose.addEventListener('click', function() {
+                alphaInfoModal.style.display = 'none';
+                if (!alphaAudioOn) {
+                    alphaAudioOn = true;
+                    alphaAudioControl.classList.add('active');
+                    alphaAudio.volume = 0.5;
+                    alphaAudio.play();
+                }
+                if (alphaInfoNeverShow && alphaInfoNeverShow.checked) {
+                    localStorage.setItem('neverShowAlphaInfo', '1');
+                    neverShowAlphaInfo = true;
+                }
+            });
+        }
+        // Hide modal on outside click
+        if (alphaInfoModal) {
+            alphaInfoModal.addEventListener('click', function(e) {
+                if (e.target === alphaInfoModal) alphaInfoModal.style.display = 'none';
+            });
+        }
+        </script>
     
     <div id="volume-slider-container">
         <input type="range" id="volume-slider-vertical" min="0" max="100" value="50" orient="vertical">
