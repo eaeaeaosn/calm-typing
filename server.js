@@ -460,6 +460,116 @@ db.get(guestDataQuery, [guestId], (err, row) => {
   });
 });
 
+// User history endpoints
+app.get('/api/user/history', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT * FROM typing_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100'
+    : 'SELECT * FROM typing_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 100';
+  
+  db.all(selectQuery, [userId], (err, rows) => {
+    if (err) {
+      console.error('User history retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Format the history data
+    const history = rows.map(row => ({
+      id: row.id,
+      text: row.text,
+      timestamp: row.created_at,
+      wordCount: row.text.split(' ').length,
+      wpm: row.wpm,
+      accuracy: row.accuracy
+    }));
+    
+    res.json({ history });
+  });
+});
+
+app.post('/api/user/history', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { text, timestamp, wordCount } = req.body;
+  
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+  
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO typing_history (user_id, text, created_at) VALUES ($1, $2, $3)'
+    : 'INSERT INTO typing_history (user_id, text, created_at) VALUES (?, ?, ?)';
+  
+  const createdAt = timestamp || new Date().toISOString();
+  
+  db.run(insertQuery, [userId, text, createdAt], function(err) {
+    if (err) {
+      console.error('User history save error:', err);
+      return res.status(500).json({ error: 'Failed to save history' });
+    }
+    
+    res.json({ 
+      message: 'History saved successfully',
+      id: this.lastID
+    });
+  });
+});
+
+// Guest history endpoints
+app.get('/api/guest/history', authenticateGuest, (req, res) => {
+  const guestId = req.guestId;
+  
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT * FROM typing_history WHERE guest_id = $1 ORDER BY created_at DESC LIMIT 100'
+    : 'SELECT * FROM typing_history WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100';
+  
+  db.all(selectQuery, [guestId], (err, rows) => {
+    if (err) {
+      console.error('Guest history retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Format the history data
+    const history = rows.map(row => ({
+      id: row.id,
+      text: row.text,
+      timestamp: row.created_at,
+      wordCount: row.text.split(' ').length,
+      wpm: row.wpm,
+      accuracy: row.accuracy
+    }));
+    
+    res.json({ history });
+  });
+});
+
+app.post('/api/guest/history', authenticateGuest, (req, res) => {
+  const guestId = req.guestId;
+  const { text, timestamp, wordCount } = req.body;
+  
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+  
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO typing_history (guest_id, text, created_at) VALUES ($1, $2, $3)'
+    : 'INSERT INTO typing_history (guest_id, text, created_at) VALUES (?, ?, ?)';
+  
+  const createdAt = timestamp || new Date().toISOString();
+  
+  db.run(insertQuery, [guestId, text, createdAt], function(err) {
+    if (err) {
+      console.error('Guest history save error:', err);
+      return res.status(500).json({ error: 'Failed to save history' });
+    }
+    
+    res.json({ 
+      message: 'History saved successfully',
+      id: this.lastID
+    });
+  });
+});
+
 // Authentication is now handled by the modal in index.html
 // No separate auth.html file needed
 

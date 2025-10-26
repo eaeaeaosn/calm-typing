@@ -463,6 +463,152 @@ class CalmTyping {
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.1);
     }
+    
+    // Save passage to cloud storage (user-specific)
+    async savePassageToCloud(sentence) {
+        try {
+            console.log('Saving passage to cloud:', sentence);
+            
+            // Get current timestamp
+            const timestamp = new Date().toISOString();
+            
+            // Create history entry
+            const historyEntry = {
+                text: sentence,
+                timestamp: timestamp,
+                wordCount: sentence.split(' ').length
+            };
+            
+            // Check if user is authenticated
+            if (typeof isAuthenticated !== 'undefined' && isAuthenticated && typeof authToken !== 'undefined' && authToken) {
+                // Save to authenticated user's history
+                await this.saveToUserHistory(historyEntry);
+            } else if (typeof guestId !== 'undefined' && guestId) {
+                // Save to guest session
+                await this.saveToGuestHistory(historyEntry);
+            } else {
+                console.log('No authentication found, saving locally only');
+                // Save to local storage as fallback
+                this.saveToLocalHistory(historyEntry);
+            }
+        } catch (error) {
+            console.error('Error saving passage to cloud:', error);
+            // Fallback to local storage
+            this.saveToLocalHistory({
+                text: sentence,
+                timestamp: new Date().toISOString(),
+                wordCount: sentence.split(' ').length
+            });
+        }
+    }
+    
+    // Save to authenticated user's history
+    async saveToUserHistory(historyEntry) {
+        try {
+            const response = await fetch(`${API_BASE}/api/user/history`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify(historyEntry)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('User history saved:', result);
+        } catch (error) {
+            console.error('Error saving to user history:', error);
+            throw error;
+        }
+    }
+    
+    // Save to guest session history
+    async saveToGuestHistory(historyEntry) {
+        try {
+            const response = await fetch(`${API_BASE}/api/guest/history`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-guest-id': guestId
+                },
+                body: JSON.stringify(historyEntry)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('Guest history saved:', result);
+        } catch (error) {
+            console.error('Error saving to guest history:', error);
+            throw error;
+        }
+    }
+    
+    // Save to local storage as fallback
+    saveToLocalHistory(historyEntry) {
+        try {
+            const existingHistory = JSON.parse(localStorage.getItem('typingHistory') || '[]');
+            existingHistory.push(historyEntry);
+            
+            // Keep only last 100 entries to prevent storage bloat
+            if (existingHistory.length > 100) {
+                existingHistory.splice(0, existingHistory.length - 100);
+            }
+            
+            localStorage.setItem('typingHistory', JSON.stringify(existingHistory));
+            console.log('History saved to local storage');
+        } catch (error) {
+            console.error('Error saving to local storage:', error);
+        }
+    }
+    
+    // Load user's writing history
+    async loadUserHistory() {
+        try {
+            let history = [];
+            
+            if (typeof isAuthenticated !== 'undefined' && isAuthenticated && typeof authToken !== 'undefined' && authToken) {
+                // Load from authenticated user's history
+                const response = await fetch(`${API_BASE}/api/user/history`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    history = result.history || [];
+                }
+            } else if (typeof guestId !== 'undefined' && guestId) {
+                // Load from guest session
+                const response = await fetch(`${API_BASE}/api/guest/history`, {
+                    headers: {
+                        'x-guest-id': guestId
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    history = result.history || [];
+                }
+            } else {
+                // Load from local storage
+                history = JSON.parse(localStorage.getItem('typingHistory') || '[]');
+            }
+            
+            return history;
+        } catch (error) {
+            console.error('Error loading user history:', error);
+            // Fallback to local storage
+            return JSON.parse(localStorage.getItem('typingHistory') || '[]');
+        }
+    }
 }
 
 // Initialize the application when the page loads

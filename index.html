@@ -1483,6 +1483,12 @@
                 <button id="audio-remove-btn" class="history-btn clear" style="flex:1;">Remove</button>
             </div>
             <div class="info" id="audio-current-label">No music assigned for current background.</div>
+            
+            <div class="divider"></div>
+            
+            <button id="history-btn" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 10px;">
+                📝 My Writing History
+            </button>
         </div>
     </div>
     
@@ -1556,12 +1562,23 @@
             <div style="display:flex; gap:12px; margin-bottom:18px;">
                 <button id="tab-word-history" class="history-btn" style="flex:1; background:#1976d2; color:#fff;">Word History</button>
                 <button id="tab-sentence-revision" class="history-btn" style="flex:1; background:#fff; color:#1976d2; border:1px solid #1976d2;">Sentence Revisions</button>
+                <button id="tab-personal-history" class="history-btn" style="flex:1; background:#fff; color:#1976d2; border:1px solid #1976d2;">📝 My Writings</button>
             </div>
             <div id="history-list"></div>
             <div id="sentence-list" style="display:none;"></div>
+            <div id="personal-history-list" style="display:none;">
+                <div id="personal-history-loading" style="text-align: center; color: #666; padding: 20px;">
+                    Loading your writing history...
+                </div>
+                <div id="personal-history-empty" style="text-align: center; color: #666; padding: 20px; display: none;">
+                    <p>No writing history found.</p>
+                    <p style="font-size: 14px; margin-top: 8px;">Start typing to build your personal writing collection!</p>
+                </div>
+            </div>
             <div class="history-buttons">
                 <button class="history-btn close" id="close-history">Close</button>
                 <button class="history-btn clear" id="clear-history">Clear History</button>
+                <button class="history-btn" id="export-history" style="background: #4ecdc4; color: white;">Export</button>
             </div>
             <div class="history-hint">Press Tab to toggle history</div>
         </div>
@@ -1967,15 +1984,22 @@
         // Tab switching logic
         const tabWordHistory = document.getElementById('tab-word-history');
         const tabSentenceRevision = document.getElementById('tab-sentence-revision');
+        const tabPersonalHistory = document.getElementById('tab-personal-history');
         const sentenceList = document.getElementById('sentence-list');
+        const personalHistoryList = document.getElementById('personal-history-list');
+        
         tabWordHistory.addEventListener('click', function() {
             tabWordHistory.style.background = '#1976d2';
             tabWordHistory.style.color = '#fff';
             tabSentenceRevision.style.background = '#fff';
             tabSentenceRevision.style.color = '#1976d2';
             tabSentenceRevision.style.border = '1px solid #1976d2';
+            tabPersonalHistory.style.background = '#fff';
+            tabPersonalHistory.style.color = '#1976d2';
+            tabPersonalHistory.style.border = '1px solid #1976d2';
             historyList.style.display = '';
             sentenceList.style.display = 'none';
+            personalHistoryList.style.display = 'none';
             renderWordHistory();
         });
         tabSentenceRevision.addEventListener('click', function() {
@@ -1984,9 +2008,28 @@
             tabWordHistory.style.background = '#fff';
             tabWordHistory.style.color = '#1976d2';
             tabWordHistory.style.border = '1px solid #1976d2';
+            tabPersonalHistory.style.background = '#fff';
+            tabPersonalHistory.style.color = '#1976d2';
+            tabPersonalHistory.style.border = '1px solid #1976d2';
             historyList.style.display = 'none';
             sentenceList.style.display = '';
+            personalHistoryList.style.display = 'none';
             renderSentenceHistory();
+        });
+        
+        tabPersonalHistory.addEventListener('click', function() {
+            tabPersonalHistory.style.background = '#1976d2';
+            tabPersonalHistory.style.color = '#fff';
+            tabWordHistory.style.background = '#fff';
+            tabWordHistory.style.color = '#1976d2';
+            tabWordHistory.style.border = '1px solid #1976d2';
+            tabSentenceRevision.style.background = '#fff';
+            tabSentenceRevision.style.color = '#1976d2';
+            tabSentenceRevision.style.border = '1px solid #1976d2';
+            historyList.style.display = 'none';
+            sentenceList.style.display = 'none';
+            personalHistoryList.style.display = '';
+            loadPersonalHistory();
         });
 
         // When opening modal, default to word history
@@ -2108,6 +2151,16 @@
             }
         });
         
+        // History button in controls
+        const historyBtn = document.getElementById('history-btn');
+        if (historyBtn) {
+            historyBtn.addEventListener('click', function() {
+                historyModal.classList.add('show');
+                // Default to personal history tab
+                tabPersonalHistory.click();
+            });
+        }
+        
         // Close modal when clicking outside
         historyModal.addEventListener('click', function(e) {
             if (e.target === historyModal) {
@@ -2132,12 +2185,75 @@
         // --- Personal history (sidebar) storage & UI ---
         let personalHistory = [];
 
-        function loadPersonalHistory() {
+        async function loadPersonalHistory() {
+            const loadingDiv = document.getElementById('personal-history-loading');
+            const emptyDiv = document.getElementById('personal-history-empty');
+            const listDiv = document.getElementById('personal-history-list');
+            
+            // Show loading state
+            loadingDiv.style.display = 'block';
+            emptyDiv.style.display = 'none';
+            
             try {
-                const raw = localStorage.getItem('personalHistory');
-                personalHistory = raw ? JSON.parse(raw) : [];
-            } catch (e) {
-                personalHistory = [];
+                let history = [];
+                
+                if (typeof isAuthenticated !== 'undefined' && isAuthenticated && typeof authToken !== 'undefined' && authToken) {
+                    // Load from authenticated user's history
+                    const response = await fetch(`${API_BASE}/api/user/history`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        history = result.history || [];
+                    }
+                } else if (typeof guestId !== 'undefined' && guestId) {
+                    // Load from guest session
+                    const response = await fetch(`${API_BASE}/api/guest/history`, {
+                        headers: {
+                            'x-guest-id': guestId
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        history = result.history || [];
+                    }
+                } else {
+                    // Load from local storage
+                    const raw = localStorage.getItem('typingHistory');
+                    history = raw ? JSON.parse(raw) : [];
+                }
+                
+                // Hide loading, show content
+                loadingDiv.style.display = 'none';
+                
+                if (history.length === 0) {
+                    emptyDiv.style.display = 'block';
+                } else {
+                    // Display the history
+                    let html = '';
+                    history.forEach((entry, index) => {
+                        const date = new Date(entry.timestamp || entry.created_at).toLocaleString();
+                        html += `
+                            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: white;">
+                                <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${date}</div>
+                                <div style="font-size: 16px; line-height: 1.5; color: #333;">${entry.text}</div>
+                                <div style="font-size: 12px; color: #999; margin-top: 8px;">
+                                    ${entry.wordCount || entry.text.split(' ').length} words
+                                </div>
+                            </div>
+                        `;
+                    });
+                    listDiv.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading personal history:', error);
+                loadingDiv.style.display = 'none';
+                emptyDiv.style.display = 'block';
+                emptyDiv.innerHTML = '<p>Error loading history. Please try again.</p>';
             }
         }
 
