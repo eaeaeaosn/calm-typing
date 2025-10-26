@@ -2223,6 +2223,8 @@
                 const isAuthenticated = authToken && localStorage.getItem('user');
                 
                 console.log('Loading personal history - Auth:', isAuthenticated, 'Guest:', guestId);
+                console.log('Auth token:', authToken);
+                console.log('User data:', localStorage.getItem('user'));
                 
                 if (isAuthenticated) {
                     // Load from authenticated user's history
@@ -2683,6 +2685,23 @@
         // Load personal history initially
         loadPersonalHistory();
         renderPersonalList();
+        
+        // Add test data function for debugging
+        window.addTestData = function() {
+            const testEntry = {
+                text: "This is a test sentence for debugging.",
+                timestamp: new Date().toISOString(),
+                wordCount: 7
+            };
+            
+            // Add to local storage for testing
+            const existingHistory = JSON.parse(localStorage.getItem('typingHistory') || '[]');
+            existingHistory.push(testEntry);
+            localStorage.setItem('typingHistory', JSON.stringify(existingHistory));
+            
+            console.log('Test data added to local storage');
+            alert('Test data added! Try loading personal history now.');
+        };
 
         // Authentication functions
         function initializeAuth() {

@@ -491,10 +491,10 @@ class CalmTyping {
             
             if (isAuthenticated) {
                 // Save to authenticated user's history
-                await this.saveToUserHistory(historyEntry);
+                await this.saveToUserHistory(historyEntry, authToken);
             } else if (guestId) {
                 // Save to guest session
-                await this.saveToGuestHistory(historyEntry);
+                await this.saveToGuestHistory(historyEntry, guestId);
             } else {
                 console.log('No authentication found, saving locally only');
                 // Save to local storage as fallback
@@ -512,7 +512,7 @@ class CalmTyping {
     }
     
     // Save to authenticated user's history
-    async saveToUserHistory(historyEntry) {
+    async saveToUserHistory(historyEntry, authToken) {
         try {
             const response = await fetch(`${API_BASE}/api/user/history`, {
                 method: 'POST',
@@ -536,7 +536,7 @@ class CalmTyping {
     }
     
     // Save to guest session history
-    async saveToGuestHistory(historyEntry) {
+    async saveToGuestHistory(historyEntry, guestId) {
         try {
             const response = await fetch(`${API_BASE}/api/guest/history`, {
                 method: 'POST',
