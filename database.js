@@ -144,7 +144,7 @@ const initDatabase = () => {
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         is_guest BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
         last_login TIMESTAMP
       );
     `;
@@ -153,8 +153,8 @@ const initDatabase = () => {
       CREATE TABLE IF NOT EXISTS guest_sessions (
         id TEXT PRIMARY KEY,
         data TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT NOW(),
+        last_activity TIMESTAMP DEFAULT NOW()
       );
     `;
     
@@ -166,7 +166,7 @@ const initDatabase = () => {
         text TEXT NOT NULL,
         wpm INTEGER,
         accuracy REAL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (guest_id) REFERENCES guest_sessions(id)
       );
@@ -178,8 +178,8 @@ const initDatabase = () => {
         user_id TEXT,
         data_type TEXT NOT NULL,
         data_content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (user_id) REFERENCES users(id),
         UNIQUE(user_id, data_type)
       );
@@ -191,8 +191,8 @@ const initDatabase = () => {
         user_id TEXT,
         guest_id TEXT,
         settings TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (guest_id) REFERENCES guest_sessions(id)
       );

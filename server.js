@@ -335,7 +335,7 @@ app.post('/api/auth/login', async (req, res) => {
 
       // Update last login
       const updateQuery = process.env.NODE_ENV === 'production' 
-        ? 'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1'
+        ? 'UPDATE users SET last_login = NOW() WHERE id = $1'
         : 'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?';
       
       db.run(updateQuery, [user.id]);
@@ -420,7 +420,7 @@ app.post('/api/user/data/:dataType', authenticateToken, (req, res) => {
   console.log('  - Data content length:', dataContent.length);
   
   const insertQuery = process.env.NODE_ENV === 'production' 
-    ? 'INSERT INTO user_data (user_id, data_type, data_content, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id, data_type) DO UPDATE SET data_content = EXCLUDED.data_content, updated_at = CURRENT_TIMESTAMP'
+    ? 'INSERT INTO user_data (user_id, data_type, data_content, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, data_type) DO UPDATE SET data_content = EXCLUDED.data_content, updated_at = NOW()'
     : 'INSERT OR REPLACE INTO user_data (user_id, data_type, data_content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)';
   
   db.run(insertQuery, [userId, dataType, dataContent], function(err) {
@@ -478,7 +478,7 @@ db.get(guestDataQuery, [guestId], (err, row) => {
     guestData[dataType] = req.body;
     
     const updateQuery = process.env.NODE_ENV === 'production' 
-      ? 'UPDATE guest_sessions SET data = $1, last_activity = CURRENT_TIMESTAMP WHERE id = $2'
+      ? 'UPDATE guest_sessions SET data = $1, last_activity = NOW() WHERE id = $2'
       : 'UPDATE guest_sessions SET data = ?, last_activity = CURRENT_TIMESTAMP WHERE id = ?';
     
     db.run(updateQuery, [JSON.stringify(guestData), guestId], function(err) {
