@@ -1,4 +1,23 @@
         <style>
+        /* Start Typing Reminder */
+        #start-typing-reminder {
+            display: none;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2.2rem;
+            color: #111;
+            z-index: 1800;
+            text-align: center;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            user-select: none;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
             .fast-tooltip {
                 position: fixed;
                 z-index: 9999;
@@ -773,14 +792,8 @@
             pointer-events: auto;
         }
 
-        /* When sidebar is visible, reveal the chevron briefly */
-        #personal-sidebar.show ~ #personal-sidebar-toggle {
-            /* No longer needed, always visible */
-        }
-
-        /* When sidebar is open, rotate the chevron */
+        /* When sidebar is open, rotate the chevron (visual only) */
         #personal-sidebar.show ~ #personal-sidebar-toggle svg { transform: rotate(180deg); transition: transform 0.18s ease; }
-    #personal-sidebar.show ~ #personal-sidebar-toggle svg { transform: rotate(180deg); transition: transform 0.18s ease; }
 
         /* Hidden larger invisible sensor area for extra sensitivity */
         #left-sensor-area {
@@ -817,6 +830,60 @@
             width: 100%;
             max-width: 400px;
             text-align: center;
+        }
+
+        /* Welcome overlay (shown after authentication) */
+        #welcome-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 4000;
+            backdrop-filter: blur(0.5rem) saturate(1.05) grayscale(0.1);
+            background: transparent;
+            padding: 24px;
+        }
+
+        #welcome-overlay.show { display: flex; }
+
+        .welcome-type {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 5.2rem;
+            color: #000000;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+            line-height: 1.18;
+            user-select: none;
+            cursor: pointer;
+            min-width: 320px;
+            filter: drop-shadow(0 0 32px rgb(179, 179, 179)) drop-shadow(0 0 64px rgb(219, 219, 219)) drop-shadow(0 0 8px #fff);
+            text-shadow:
+                0 0 32px rgb(93, 93, 93),
+                0 0 64px rgb(190, 190, 190),
+                0 0 8px #fff,
+                0 4px 32px rgba(0,0,0,0.22),
+                0 1px 0 #222;
+            transition: font-size 0.2s, filter 0.2s;
+        }
+
+        .welcome-hint {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2rem;
+            color: #000000;
+            text-align: center;
+            margin-top: 1.2em;
+            opacity: 0.85;
+            text-shadow: 0 0 0px rgb(0, 0, 0), 0 0px 0 #222;
+            pointer-events: none;
+            user-select: none;
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .welcome-type { font-size: 2.7rem; min-width: 0; }
+            .welcome-hint { font-size: 0.95rem; }
         }
         
         .auth-container .logo {
@@ -1267,6 +1334,12 @@
             </div>
         </div>
     </aside>
+    <!-- Personal History Focused Reading Popup -->
+    <div id="personal-popup-overlay" style="display:none; position:fixed; z-index:3200; left:0; top:0; width:100vw; height:100vh; background:rgba(30,30,40,0.32); align-items:center; justify-content:center;">
+        <div id="personal-popup-content" style="background:#fff; color:#222; border-radius:14px; max-width:540px; width:90vw; padding:38px 32px 28px 32px; box-shadow:0 8px 40px rgba(0,0,0,0.18); text-align:left; position:relative; font-family: 'Courier New', Courier, monospace; font-size:1.18rem; line-height:1.7;">
+            <button id="personal-popup-close" style="position:absolute; top:16px; right:18px; background:none; border:none; font-size:1.5rem; color:#888; cursor:pointer;">✕</button>
+        </div>
+    </div>
     <!-- Sidebar toggle (small angle icon) -->
     <button id="personal-sidebar-toggle" title="Open personal history" aria-label="Open personal history">
         <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2">
@@ -1408,6 +1481,13 @@
         <input type="range" id="volume-slider-vertical" min="0" max="100" value="50" orient="vertical">
         <span id="volume-value">50%</span>
     </div>
+    <!-- Welcome Overlay (shown after auth, tap to continue) -->
+    <div id="welcome-overlay" role="dialog" aria-hidden="true">
+        <div>
+            <div id="welcome-typewriter" class="welcome-type"></div>
+            <span class="welcome-hint" id="welcome-hint">Space to continue</span>
+        </div>
+    </div>
     
     <div id="controls" class="collapsed">
         <button id="toggle-btn">☰</button>
@@ -1459,23 +1539,20 @@
                 <button id="audio-remove-btn" class="history-btn clear" style="flex:1;">Remove</button>
             </div>
             <div class="info" id="audio-current-label">No music assigned for current background.</div>
-<<<<<<< HEAD
             <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="toggle-keys-reminder-checkbox" />
                 <label for="toggle-keys-reminder-checkbox" style="font-size:13px; color:#555;">Show shortcut reminder</label>
             </div>
-=======
-            
+
             <div class="divider"></div>
-            
+
             <button id="history-btn" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 10px;">
                 📝 My Writing History
             </button>
-            
+
             <button id="logout-btn" style="width: 100%; padding: 12px; background: #ff6b6b; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 8px; display: none;">
                 🚪 Sign Out
             </button>
->>>>>>> user-storage
         </div>
     </div>
     
@@ -1553,6 +1630,8 @@
         <span class="shortcut-dot">·</span>
         <span class="shortcut-key">⌘/Ctrl+Enter</span>: save revised sentences
     </div>
+
+    <div id="start-typing-reminder">Start with typing anything</div>
     
     <div id="history-modal">
         <div id="history-content">
@@ -2361,11 +2440,61 @@
                 item.className = 'personal-item';
                 item.dataset.id = entry.id;
                 item.innerHTML = `<div class=\"personal-item-title\">${entry.title}</div><div class=\"personal-item-time\">${new Date(entry.timestamp).toLocaleString()}</div>`;
-                item.addEventListener('click', () => selectPersonalEntry(entry.id));
+                item.addEventListener('click', () => {
+                    showPersonalPopup(entry.text, entry.title, entry.timestamp);
+                });
                 listEl.appendChild(item);
             });
-<<<<<<< HEAD
-=======
+        // Focused reading popup for personal history
+        function showPersonalPopup(text, title, timestamp) {
+            const overlay = document.getElementById('personal-popup-overlay');
+            const content = document.getElementById('personal-popup-content');
+            const closeBtn = document.getElementById('personal-popup-close');
+            if (!overlay || !content || !closeBtn) return;
+            // Clear and build content
+            content.innerHTML = '';
+            if (title) {
+                const t = document.createElement('div');
+                t.style.fontWeight = 'bold';
+                t.style.fontSize = '1.1rem';
+                t.style.marginBottom = '10px';
+                t.textContent = title;
+                content.appendChild(t);
+            }
+            if (timestamp) {
+                const ts = document.createElement('div');
+                ts.style.fontSize = '0.95rem';
+                ts.style.color = '#888';
+                ts.style.marginBottom = '18px';
+                ts.textContent = new Date(timestamp).toLocaleString();
+                content.appendChild(ts);
+            }
+            const para = document.createElement('div');
+            para.style.whiteSpace = 'pre-wrap';
+            para.style.fontFamily = 'Arial, Helvetica, sans-serif';
+            para.style.fontSize = '1.18rem';
+            para.style.color = '#222';
+            para.textContent = text;
+            content.appendChild(para);
+            // Add close button
+            const closeBtn2 = document.createElement('button');
+            closeBtn2.id = 'personal-popup-close';
+            closeBtn2.textContent = '✕';
+            closeBtn2.style.position = 'absolute';
+            closeBtn2.style.top = '16px';
+            closeBtn2.style.right = '18px';
+            closeBtn2.style.background = 'none';
+            closeBtn2.style.border = 'none';
+            closeBtn2.style.fontSize = '1.5rem';
+            closeBtn2.style.color = '#888';
+            closeBtn2.style.cursor = 'pointer';
+            content.appendChild(closeBtn2);
+            closeBtn2.onclick = () => { overlay.style.display = 'none'; };
+            overlay.style.display = 'flex';
+            setTimeout(() => { overlay.focus && overlay.focus(); }, 10);
+            overlay.onclick = function(e) { if (e.target === overlay) overlay.style.display = 'none'; };
+        }
+
         // Focused reading popup for personal history
         function showPersonalPopup(text, title, timestamp) {
             const overlay = document.getElementById('personal-popup-overlay');
@@ -2401,7 +2530,6 @@
         document.getElementById('personal-popup-overlay').addEventListener('click', function(e) {
             if (e.target === this) this.style.display = 'none';
         });
->>>>>>> user-storage
         }
 
         function selectPersonalEntry(id) {
@@ -2514,6 +2642,22 @@
             if (isCmdEnter || isCtrlEnter) {
                 e.preventDefault();
                 saveAllRevisedSentencesAsPersonal();
+                // Show 'Start with typing anything' reminder until user types
+                const reminder = document.getElementById('start-typing-reminder');
+                if (reminder) {
+                    reminder.style.display = 'block';
+                    setTimeout(() => { reminder.style.opacity = 1; }, 10);
+                    // Add a one-time keydown listener to hide reminder on next typing
+                    const hideReminder = function(evt) {
+                        // Ignore modifier-only keys
+                        if (evt.key.length === 1 || evt.key === 'Backspace' || evt.key === 'Enter' || evt.key === ' ') {
+                            reminder.style.opacity = 0;
+                            setTimeout(() => { reminder.style.display = 'none'; }, 400);
+                            document.removeEventListener('keydown', hideReminder, true);
+                        }
+                    };
+                    document.addEventListener('keydown', hideReminder, true);
+                }
             }
         });
 
@@ -2642,10 +2786,10 @@
             // Check if we're running locally (file:// protocol)
             if (window.location.protocol === 'file:') {
                 console.log('Running in local file mode');
-                // For local testing, always show auth modal first time
+                // For local testing, if no auth present, create a local guest session automatically
                 if (!authToken && !guestId) {
-                    console.log('No authentication found, showing modal');
-                    showAuthModal();
+                    console.log('No authentication found, creating local guest session');
+                    createGuestSession();
                     return;
                 }
             }
@@ -2662,9 +2806,9 @@
                 hideAuthModal();
                 console.log('Guest session active');
             } else {
-                // No authentication - show auth modal
-                console.log('No authentication found, showing modal');
-                showAuthModal();
+                // No authentication - automatically create guest session instead of showing welcome modal
+                console.log('No authentication found, creating guest session');
+                createGuestSession();
                 return;
             }
             
@@ -2673,21 +2817,15 @@
             loadUserSettings();
         }
         
+        // Welcome modal removed: no-op functions to avoid affecting other auth code paths
         function showAuthModal() {
-            const authModal = document.getElementById('auth-modal');
-            if (authModal) {
-                authModal.style.display = 'flex';
-                console.log('Auth modal shown');
-            } else {
-                console.log('Auth modal not found');
-            }
+            // intentionally left blank: welcome modal removed
+            console.log('showAuthModal called, but welcome modal is disabled');
         }
-        
+
         function hideAuthModal() {
-            const authModal = document.getElementById('auth-modal');
-            if (authModal) {
-                authModal.style.display = 'none';
-            }
+            // intentionally left blank
+            console.log('hideAuthModal called, but welcome modal is disabled');
         }
         
         // Create guest session automatically
@@ -2811,7 +2949,8 @@
             isGuest = false;
             guestId = null;
             updateAuthUI();
-            showAuthModal();
+            // Instead of showing the welcome modal, create a guest session so the app continues working
+            createGuestSession();
         }
         
         function switchToAuth() {
@@ -3164,7 +3303,93 @@
         }
         
         // Initialize authentication on startup
+        // Welcome overlay helpers (show between auth and interface)
+        function showWelcomeIfNeeded() {
+            try {
+                if (localStorage.getItem('welcomeSeen') === '1') return;
+                const overlay = document.getElementById('welcome-overlay');
+                if (!overlay) return;
+                overlay.classList.add('show');
+                overlay.setAttribute('aria-hidden', 'false');
+                const typeEl = document.getElementById('welcome-typewriter');
+                const hintEl = document.getElementById('welcome-hint');
+                if (!typeEl) return;
+
+                // Two pages of welcome
+                const pages = [
+                    'Hi, welcome to Calm Typing.',
+                    'Start with typing anything.'
+                ];
+                let page = 0;
+                let typing = false;
+
+                function typewriterEffect(text, cb) {
+                    typeEl.textContent = '';
+                    let i = 0;
+                    typing = true;
+                    function typeNext() {
+                        if (i < text.length) {
+                            typeEl.textContent += text[i];
+                            i++;
+                            setTimeout(typeNext, 28 + Math.random()*32);
+                        } else {
+                            typing = false;
+                            if (cb) cb();
+                        }
+                    }
+                    typeNext();
+                }
+
+                function showPage(idx) {
+                    typewriterEffect(pages[idx]);
+                    if (hintEl) {
+                        if (idx === 1) {
+                            hintEl.style.opacity = 1;
+                        } else {
+                            hintEl.style.opacity = 0.5;
+                        }
+                    }
+                }
+
+                function hide() {
+                    overlay.classList.remove('show');
+                    overlay.setAttribute('aria-hidden', 'true');
+                    localStorage.setItem('welcomeSeen', '1');
+                }
+
+                // Click on words to continue
+                typeEl.onclick = function() {
+                    if (typing) return;
+                    if (page === 0) {
+                        page = 1;
+                        showPage(page);
+                    } else {
+                        hide();
+                    }
+                };
+
+                // Keyboard: Enter/Space/Esc to advance
+                function onKey(e) {
+                    if (typing) return;
+                    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+                        if (page === 0) {
+                            page = 1;
+                            showPage(page);
+                        } else {
+                            hide();
+                            document.removeEventListener('keydown', onKey);
+                        }
+                    }
+                }
+                document.addEventListener('keydown', onKey);
+
+                showPage(page);
+            } catch (e) { console.warn('showWelcomeIfNeeded failed', e); }
+        }
+
         initializeAuth();
+        // show welcome shortly after auth finishes (non-blocking)
+        setTimeout(showWelcomeIfNeeded, 420);
         
         // Add event listeners for authentication modal
         document.addEventListener('DOMContentLoaded', function() {
