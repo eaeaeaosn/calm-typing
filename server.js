@@ -131,7 +131,12 @@ app.get('/api/health', (req, res) => {
 
 // Database test endpoint
 app.get('/api/test-db', (req, res) => {
-  db.get('SELECT NOW() as current_time', [], (err, result) => {
+  // Use the correct SQL function based on database type
+  const timeQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT NOW() as current_time' 
+    : 'SELECT CURRENT_TIMESTAMP as current_time';
+    
+  db.get(timeQuery, [], (err, result) => {
     if (err) {
       console.error('Database test error:', err);
       return res.status(500).json({ error: 'Database connection failed', details: err.message });
@@ -302,10 +307,14 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const loginQuery = process.env.NODE_ENV === 'production' 
-      ? 'SELECT * FROM users WHERE username = $1 OR email = $1'
+      ? 'SELECT * FROM users WHERE username = $1 OR email = $2'
       : 'SELECT * FROM users WHERE username = ? OR email = ?';
     
-    db.get(loginQuery, [username, username], async (err, user) => {
+    const loginParams = process.env.NODE_ENV === 'production' 
+      ? [username, username] 
+      : [username, username];
+    
+    db.get(loginQuery, loginParams, async (err, user) => {
       if (err) {
         console.error('Database error during login:', err);
         return res.status(500).json({ error: 'Database error' });
