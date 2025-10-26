@@ -2304,14 +2304,12 @@
                             history = result.history || [];
                             console.log('Loaded user history:', history.length, 'entries');
                         } else {
-                            console.log('Failed to load user history, falling back to local storage');
-                            const raw = localStorage.getItem('typingHistory');
-                            history = raw ? JSON.parse(raw) : [];
+                            console.log('Failed to load user history, showing empty history for security');
+                            history = [];
                         }
                     } catch (error) {
-                        console.log('Error loading user history, falling back to local storage:', error);
-                        const raw = localStorage.getItem('typingHistory');
-                        history = raw ? JSON.parse(raw) : [];
+                        console.log('Error loading user history, showing empty history for security:', error);
+                        history = [];
                     }
                 } else if (guestId) {
                     // Load from guest session
@@ -2327,14 +2325,12 @@
                             history = result.history || [];
                             console.log('Loaded guest history:', history.length, 'entries');
                         } else {
-                            console.log('Failed to load guest history, falling back to local storage');
-                            const raw = localStorage.getItem('typingHistory');
-                            history = raw ? JSON.parse(raw) : [];
+                            console.log('Failed to load guest history, showing empty history for security');
+                            history = [];
                         }
                     } catch (error) {
-                        console.log('Error loading guest history, falling back to local storage:', error);
-                        const raw = localStorage.getItem('typingHistory');
-                        history = raw ? JSON.parse(raw) : [];
+                        console.log('Error loading guest history, showing empty history for security:', error);
+                        history = [];
                     }
                 } else {
                     // Load from local storage
@@ -2406,12 +2402,12 @@
                             const result = await response.json();
                             history = result.history || [];
                         } else {
-                            const raw = localStorage.getItem('typingHistory');
-                            history = raw ? JSON.parse(raw) : [];
+                            console.log('Failed to load history for export, showing empty history for security');
+                            history = [];
                         }
                     } catch (error) {
-                        const raw = localStorage.getItem('typingHistory');
-                        history = raw ? JSON.parse(raw) : [];
+                        console.log('Error loading history for export, showing empty history for security');
+                        history = [];
                     }
                 } else if (guestId) {
                     try {
@@ -2425,16 +2421,16 @@
                             const result = await response.json();
                             history = result.history || [];
                         } else {
-                            const raw = localStorage.getItem('typingHistory');
-                            history = raw ? JSON.parse(raw) : [];
+                            console.log('Failed to load history for export, showing empty history for security');
+                            history = [];
                         }
                     } catch (error) {
-                        const raw = localStorage.getItem('typingHistory');
-                        history = raw ? JSON.parse(raw) : [];
+                        console.log('Error loading history for export, showing empty history for security');
+                        history = [];
                     }
                 } else {
-                    const raw = localStorage.getItem('typingHistory');
-                    history = raw ? JSON.parse(raw) : [];
+                    console.log('No authentication found for export, showing empty history for security');
+                    history = [];
                 }
                 
                 if (history.length === 0) {

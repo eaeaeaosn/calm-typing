@@ -614,8 +614,8 @@ class CalmTyping {
             return history;
         } catch (error) {
             console.error('Error loading user history:', error);
-            // Fallback to local storage
-            return JSON.parse(localStorage.getItem('typingHistory') || '[]');
+            // Return empty array for security - no fallback to shared localStorage
+            return [];
         }
     }
 }
