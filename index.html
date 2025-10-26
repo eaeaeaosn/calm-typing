@@ -2463,12 +2463,12 @@
             overlay.style.display = 'flex';
             setTimeout(() => { overlay.focus && overlay.focus(); }, 10);
         }
-        document.getElementById('personal-popup-close').onclick = function() {
+        document.getElementById('personal-popup-close').addEventListener('click', function() {
             document.getElementById('personal-popup-overlay').style.display = 'none';
-        };
-        document.getElementById('personal-popup-overlay').onclick = function(e) {
+        });
+        document.getElementById('personal-popup-overlay').addEventListener('click', function(e) {
             if (e.target === this) this.style.display = 'none';
-        };
+        });
         }
 
         function selectPersonalEntry(id) {
@@ -2478,7 +2478,7 @@
             document.getElementById('personal-detail-time').textContent = new Date(entry.timestamp).toLocaleString();
             document.getElementById('personal-detail-text').textContent = entry.text;
             // attach delete behavior
-            document.getElementById('personal-delete').onclick = function() {
+            document.getElementById('personal-delete').addEventListener('click', function() {
                 if (!confirm('Delete this entry?')) return;
                 personalHistory = personalHistory.filter(e => e.id !== id);
                 savePersonalHistory();
@@ -2486,7 +2486,7 @@
                 document.getElementById('personal-detail-title').textContent = '';
                 document.getElementById('personal-detail-text').textContent = '';
                 document.getElementById('personal-detail-time').textContent = '';
-            };
+            });
         }
 
         // Try to generate a short title via DeepSeek; fallback to a truncated phrase
@@ -2851,13 +2851,29 @@
                 if (isAuthenticated) {
                     authStatus.innerHTML = `
                         <div style="color: #667eea; font-weight: 500;">Signed in as ${currentUser.username}</div>
-                        <button onclick="logout()" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign Out</button>
+                        <button id="auth-logout-btn" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign Out</button>
                     `;
+                    
+                    // Add event listener for the logout button
+                    const authLogoutBtn = document.getElementById('auth-logout-btn');
+                    if (authLogoutBtn) {
+                        authLogoutBtn.addEventListener('click', function() {
+                            logout();
+                        });
+                    }
                 } else if (isGuest) {
                     authStatus.innerHTML = `
                         <div style="color: #999;">Guest Session</div>
-                        <button onclick="switchToAuth()" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign In</button>
+                        <button id="auth-signin-btn" style="margin-top: 5px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Sign In</button>
                     `;
+                    
+                    // Add event listener for the sign in button
+                    const authSigninBtn = document.getElementById('auth-signin-btn');
+                    if (authSigninBtn) {
+                        authSigninBtn.addEventListener('click', function() {
+                            switchToAuth();
+                        });
+                    }
                 }
                 
                 controlsContent.appendChild(authStatus);
