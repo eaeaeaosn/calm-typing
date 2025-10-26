@@ -813,7 +813,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -821,15 +822,42 @@
             padding: 20px;
         }
         
+        .auth-modal.show {
+            display: flex;
+        }
+        
         .auth-container {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             border-radius: 20px;
             padding: 40px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            width: 100%;
+            position: relative;
             max-width: 400px;
-            text-align: center;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .auth-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        
+        .auth-close-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: #333;
         }
 
         /* Welcome overlay (shown after authentication) */
@@ -1559,6 +1587,7 @@
     <!-- Authentication Modal -->
     <div id="auth-modal" class="auth-modal">
         <div class="auth-container">
+            <button class="auth-close-btn" id="auth-close-btn" title="Close">×</button>
             <div class="logo">Calm Typing</div>
             <div class="subtitle">Choose how you'd like to start</div>
             
@@ -2800,11 +2829,15 @@
                 updateAuthUI();
                 hideAuthModal();
                 console.log('User authenticated');
+                // Show welcome page after authentication
+                setTimeout(showWelcomeIfNeeded, 100);
             } else if (guestId) {
                 isGuest = true;
                 updateAuthUI();
                 hideAuthModal();
                 console.log('Guest session active');
+                // Show welcome page for guests too
+                setTimeout(showWelcomeIfNeeded, 100);
             } else {
                 // No authentication - automatically create guest session instead of showing welcome modal
                 console.log('No authentication found, creating guest session');
@@ -2821,7 +2854,6 @@
         function showAuthModal() {
             const authModal = document.getElementById('auth-modal');
             if (authModal) {
-                authModal.style.display = 'flex';
                 authModal.classList.add('show');
                 // Focus on the first input
                 const firstInput = authModal.querySelector('input[type="text"], input[type="email"]');
@@ -2834,7 +2866,6 @@
         function hideAuthModal() {
             const authModal = document.getElementById('auth-modal');
             if (authModal) {
-                authModal.style.display = 'none';
                 authModal.classList.remove('show');
                 clearAuthMessages();
             }
@@ -2852,6 +2883,8 @@
                     updateAuthUI();
                     loadHistory();
                     loadUserSettings();
+                    // Show welcome page for local guest
+                    setTimeout(showWelcomeIfNeeded, 100);
                     return;
                 }
                 
@@ -2876,6 +2909,8 @@
                     updateAuthUI();
                     loadHistory();
                     loadUserSettings();
+                    // Show welcome page for server guest
+                    setTimeout(showWelcomeIfNeeded, 100);
                 } else {
                     console.log('Guest session creation failed, falling back to local');
                     // Fallback to local guest session
@@ -2976,6 +3011,7 @@
             localStorage.removeItem('guestId');
             localStorage.removeItem('typingHistory');
             localStorage.removeItem('userSettings');
+            // Note: welcomeSeen removed - welcome page now shows every time
             
             // Reset authentication state
             isAuthenticated = false;
@@ -2989,6 +3025,11 @@
             // Update UI and show login modal
             updateAuthUI();
             showAuthModal();
+        }
+        
+        // Function to reset welcome page for testing (no longer needed - welcome shows every time)
+        function resetWelcomePage() {
+            console.log('Welcome page now shows every time - no reset needed');
         }
         
         // Authentication form handlers
@@ -3080,6 +3121,8 @@
                         hideAuthModal();
                         loadHistory();
                         loadUserSettings();
+                        // Show welcome page after successful login
+                        setTimeout(showWelcomeIfNeeded, 100);
                     }, 1000);
                 } else {
                     showAuthError(result.error || 'Login failed');
@@ -3136,6 +3179,8 @@
                         hideAuthModal();
                         loadHistory();
                         loadUserSettings();
+                        // Show welcome page after successful registration
+                        setTimeout(showWelcomeIfNeeded, 100);
                     }, 1000);
                 } else {
                     showAuthError(result.error || 'Registration failed');
@@ -3329,7 +3374,7 @@
         // Welcome overlay helpers (show between auth and interface)
         function showWelcomeIfNeeded() {
             try {
-                if (localStorage.getItem('welcomeSeen') === '1') return;
+                // Always show welcome page - removed the welcomeSeen check
                 const overlay = document.getElementById('welcome-overlay');
                 if (!overlay) return;
                 overlay.classList.add('show');
@@ -3377,7 +3422,7 @@
                 function hide() {
                     overlay.classList.remove('show');
                     overlay.setAttribute('aria-hidden', 'true');
-                    localStorage.setItem('welcomeSeen', '1');
+                    // Removed localStorage.setItem('welcomeSeen', '1') - always show welcome
                 }
 
                 // Click on words to continue
@@ -3452,6 +3497,24 @@
             if (guestButton) {
                 guestButton.addEventListener('click', function() {
                     handleGuestAccess();
+                });
+            }
+            
+            // Close button for auth modal
+            const authCloseBtn = document.getElementById('auth-close-btn');
+            if (authCloseBtn) {
+                authCloseBtn.addEventListener('click', function() {
+                    hideAuthModal();
+                });
+            }
+            
+            // Close modal when clicking outside
+            const authModal = document.getElementById('auth-modal');
+            if (authModal) {
+                authModal.addEventListener('click', function(e) {
+                    if (e.target === authModal) {
+                        hideAuthModal();
+                    }
                 });
             }
         });
