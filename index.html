@@ -1459,23 +1459,6 @@
                 <button id="audio-remove-btn" class="history-btn clear" style="flex:1;">Remove</button>
             </div>
             <div class="info" id="audio-current-label">No music assigned for current background.</div>
-<<<<<<< HEAD
-            <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="toggle-keys-reminder-checkbox" />
-                <label for="toggle-keys-reminder-checkbox" style="font-size:13px; color:#555;">Show shortcut reminder</label>
-            </div>
-=======
-            
-            <div class="divider"></div>
-            
-            <button id="history-btn" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 10px;">
-                📝 My Writing History
-            </button>
-            
-            <button id="logout-btn" style="width: 100%; padding: 12px; background: #ff6b6b; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 8px; display: none;">
-                🚪 Sign Out
-            </button>
->>>>>>> user-storage
         </div>
     </div>
     
@@ -2364,8 +2347,6 @@
                 item.addEventListener('click', () => selectPersonalEntry(entry.id));
                 listEl.appendChild(item);
             });
-<<<<<<< HEAD
-=======
         // Focused reading popup for personal history
         function showPersonalPopup(text, title, timestamp) {
             const overlay = document.getElementById('personal-popup-overlay');
@@ -2395,13 +2376,12 @@
             overlay.style.display = 'flex';
             setTimeout(() => { overlay.focus && overlay.focus(); }, 10);
         }
-        document.getElementById('personal-popup-close').addEventListener('click', function() {
+        document.getElementById('personal-popup-close').onclick = function() {
             document.getElementById('personal-popup-overlay').style.display = 'none';
-        });
-        document.getElementById('personal-popup-overlay').addEventListener('click', function(e) {
+        };
+        document.getElementById('personal-popup-overlay').onclick = function(e) {
             if (e.target === this) this.style.display = 'none';
-        });
->>>>>>> user-storage
+        };
         }
 
         function selectPersonalEntry(id) {
