@@ -52,17 +52,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
+// Session configuration - DISABLED for JWT-only authentication
+// app.use(session({
+//   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+//   resave: false,
+//   saveUninitialized: false,
+//   cookie: {
+//     secure: process.env.NODE_ENV === 'production',
+//     httpOnly: true,
+//     maxAge: 24 * 60 * 60 * 1000 // 24 hours
+//   }
+// }));
 
 // Database initialization
 initDatabase();
@@ -73,14 +73,22 @@ const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('🔐 JWT Auth Debug:');
+  console.log('  - Auth header:', authHeader);
+  console.log('  - Token:', token ? `${token.substring(0, 20)}...` : 'None');
+  console.log('  - User-Agent:', req.headers['user-agent']);
+
   if (!token) {
+    console.log('  ❌ No token provided');
     return res.status(401).json({ error: 'Access token required' });
   }
 
   jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret', (err, user) => {
     if (err) {
+      console.log('  ❌ Token verification failed:', err.message);
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
+    console.log('  ✅ Token verified for user:', user.userId, user.username);
     req.user = user;
     next();
   });
@@ -363,23 +371,28 @@ app.get('/api/user/data/:dataType', authenticateToken, (req, res) => {
   const { dataType } = req.params;
   const userId = req.user.userId;
   
+  console.log('📖 Loading user data:');
+  console.log('  - User ID:', userId);
+  console.log('  - Data type:', dataType);
+  
   const selectQuery = process.env.NODE_ENV === 'production' 
     ? 'SELECT data_content FROM user_data WHERE user_id = $1 AND data_type = $2 ORDER BY updated_at DESC LIMIT 1'
     : 'SELECT data_content FROM user_data WHERE user_id = ? AND data_type = ? ORDER BY updated_at DESC LIMIT 1';
   
   db.get(selectQuery, [userId, dataType], (err, row) => {
     if (err) {
-      console.error('User data retrieval error:', err);
+      console.error('❌ User data retrieval error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-      
-      if (row) {
-        res.json({ data: JSON.parse(row.data_content) });
-      } else {
-        res.json({ data: null });
-      }
+    
+    if (row) {
+      console.log('✅ User data found for user:', userId);
+      res.json({ data: JSON.parse(row.data_content) });
+    } else {
+      console.log('ℹ️ No data found for user:', userId);
+      res.json({ data: null });
     }
-  );
+  });
 });
 
 // Save user data
@@ -388,16 +401,22 @@ app.post('/api/user/data/:dataType', authenticateToken, (req, res) => {
   const userId = req.user.userId;
   const dataContent = JSON.stringify(req.body);
   
+  console.log('💾 Saving user data:');
+  console.log('  - User ID:', userId);
+  console.log('  - Data type:', dataType);
+  console.log('  - Data content length:', dataContent.length);
+  
   const insertQuery = process.env.NODE_ENV === 'production' 
     ? 'INSERT INTO user_data (user_id, data_type, data_content, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id, data_type) DO UPDATE SET data_content = EXCLUDED.data_content, updated_at = CURRENT_TIMESTAMP'
     : 'INSERT OR REPLACE INTO user_data (user_id, data_type, data_content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)';
   
   db.run(insertQuery, [userId, dataType, dataContent], function(err) {
     if (err) {
-      console.error('User data save error:', err);
+      console.error('❌ User data save error:', err);
       return res.status(500).json({ error: 'Failed to save data' });
     }
     
+    console.log('✅ User data saved successfully for user:', userId);
     res.json({ message: 'Data saved successfully' });
   });
 });
@@ -457,6 +476,116 @@ db.get(guestDataQuery, [guestId], (err, row) => {
         res.json({ message: 'Guest data saved successfully' });
       }
     );
+  });
+});
+
+// User history endpoints
+app.get('/api/user/history', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT * FROM typing_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100'
+    : 'SELECT * FROM typing_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 100';
+  
+  db.all(selectQuery, [userId], (err, rows) => {
+    if (err) {
+      console.error('User history retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Format the history data
+    const history = rows.map(row => ({
+      id: row.id,
+      text: row.text,
+      timestamp: row.created_at,
+      wordCount: row.text.split(' ').length,
+      wpm: row.wpm,
+      accuracy: row.accuracy
+    }));
+    
+    res.json({ history });
+  });
+});
+
+app.post('/api/user/history', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const { text, timestamp, wordCount } = req.body;
+  
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+  
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO typing_history (user_id, text, created_at) VALUES ($1, $2, $3)'
+    : 'INSERT INTO typing_history (user_id, text, created_at) VALUES (?, ?, ?)';
+  
+  const createdAt = timestamp || new Date().toISOString();
+  
+  db.run(insertQuery, [userId, text, createdAt], function(err) {
+    if (err) {
+      console.error('User history save error:', err);
+      return res.status(500).json({ error: 'Failed to save history' });
+    }
+    
+    res.json({ 
+      message: 'History saved successfully',
+      id: this.lastID
+    });
+  });
+});
+
+// Guest history endpoints
+app.get('/api/guest/history', authenticateGuest, (req, res) => {
+  const guestId = req.guestId;
+  
+  const selectQuery = process.env.NODE_ENV === 'production' 
+    ? 'SELECT * FROM typing_history WHERE guest_id = $1 ORDER BY created_at DESC LIMIT 100'
+    : 'SELECT * FROM typing_history WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100';
+  
+  db.all(selectQuery, [guestId], (err, rows) => {
+    if (err) {
+      console.error('Guest history retrieval error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Format the history data
+    const history = rows.map(row => ({
+      id: row.id,
+      text: row.text,
+      timestamp: row.created_at,
+      wordCount: row.text.split(' ').length,
+      wpm: row.wpm,
+      accuracy: row.accuracy
+    }));
+    
+    res.json({ history });
+  });
+});
+
+app.post('/api/guest/history', authenticateGuest, (req, res) => {
+  const guestId = req.guestId;
+  const { text, timestamp, wordCount } = req.body;
+  
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+  
+  const insertQuery = process.env.NODE_ENV === 'production' 
+    ? 'INSERT INTO typing_history (guest_id, text, created_at) VALUES ($1, $2, $3)'
+    : 'INSERT INTO typing_history (guest_id, text, created_at) VALUES (?, ?, ?)';
+  
+  const createdAt = timestamp || new Date().toISOString();
+  
+  db.run(insertQuery, [guestId, text, createdAt], function(err) {
+    if (err) {
+      console.error('Guest history save error:', err);
+      return res.status(500).json({ error: 'Failed to save history' });
+    }
+    
+    res.json({ 
+      message: 'History saved successfully',
+      id: this.lastID
+    });
   });
 });
 
