@@ -1489,6 +1489,10 @@
             <button id="history-btn" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 10px;">
                 📝 My Writing History
             </button>
+            
+            <button id="logout-btn" style="width: 100%; padding: 12px; background: #ff6b6b; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 8px; display: none;">
+                🚪 Sign Out
+            </button>
         </div>
     </div>
     
@@ -2161,6 +2165,22 @@
             });
         }
         
+        // Export history functionality
+        const exportHistoryBtn = document.getElementById('export-history');
+        if (exportHistoryBtn) {
+            exportHistoryBtn.addEventListener('click', function() {
+                exportPersonalHistory();
+            });
+        }
+        
+        // Logout button functionality
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function() {
+                logout();
+            });
+        }
+        
         // Close modal when clicking outside
         historyModal.addEventListener('click', function(e) {
             if (e.target === historyModal) {
@@ -2197,34 +2217,64 @@
             try {
                 let history = [];
                 
-                if (typeof isAuthenticated !== 'undefined' && isAuthenticated && typeof authToken !== 'undefined' && authToken) {
+                // Check authentication status
+                const authToken = localStorage.getItem('authToken');
+                const guestId = localStorage.getItem('guestId');
+                const isAuthenticated = authToken && localStorage.getItem('user');
+                
+                console.log('Loading personal history - Auth:', isAuthenticated, 'Guest:', guestId);
+                
+                if (isAuthenticated) {
                     // Load from authenticated user's history
-                    const response = await fetch(`${API_BASE}/api/user/history`, {
-                        headers: {
-                            'Authorization': `Bearer ${authToken}`
+                    try {
+                        const response = await fetch(`${API_BASE}/api/user/history`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            history = result.history || [];
+                            console.log('Loaded user history:', history.length, 'entries');
+                        } else {
+                            console.log('Failed to load user history, falling back to local storage');
+                            const raw = localStorage.getItem('typingHistory');
+                            history = raw ? JSON.parse(raw) : [];
                         }
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        history = result.history || [];
+                    } catch (error) {
+                        console.log('Error loading user history, falling back to local storage:', error);
+                        const raw = localStorage.getItem('typingHistory');
+                        history = raw ? JSON.parse(raw) : [];
                     }
-                } else if (typeof guestId !== 'undefined' && guestId) {
+                } else if (guestId) {
                     // Load from guest session
-                    const response = await fetch(`${API_BASE}/api/guest/history`, {
-                        headers: {
-                            'x-guest-id': guestId
+                    try {
+                        const response = await fetch(`${API_BASE}/api/guest/history`, {
+                            headers: {
+                                'x-guest-id': guestId
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            history = result.history || [];
+                            console.log('Loaded guest history:', history.length, 'entries');
+                        } else {
+                            console.log('Failed to load guest history, falling back to local storage');
+                            const raw = localStorage.getItem('typingHistory');
+                            history = raw ? JSON.parse(raw) : [];
                         }
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        history = result.history || [];
+                    } catch (error) {
+                        console.log('Error loading guest history, falling back to local storage:', error);
+                        const raw = localStorage.getItem('typingHistory');
+                        history = raw ? JSON.parse(raw) : [];
                     }
                 } else {
                     // Load from local storage
                     const raw = localStorage.getItem('typingHistory');
                     history = raw ? JSON.parse(raw) : [];
+                    console.log('Loaded local history:', history.length, 'entries');
                 }
                 
                 // Hide loading, show content
@@ -2237,12 +2287,15 @@
                     let html = '';
                     history.forEach((entry, index) => {
                         const date = new Date(entry.timestamp || entry.created_at).toLocaleString();
+                        const text = entry.text || entry.sentence || '';
+                        const wordCount = entry.wordCount || text.split(' ').length;
+                        
                         html += `
                             <div style="border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: white;">
                                 <div style="font-size: 14px; color: #666; margin-bottom: 8px;">${date}</div>
-                                <div style="font-size: 16px; line-height: 1.5; color: #333;">${entry.text}</div>
+                                <div style="font-size: 16px; line-height: 1.5; color: #333;">${text}</div>
                                 <div style="font-size: 12px; color: #999; margin-top: 8px;">
-                                    ${entry.wordCount || entry.text.split(' ').length} words
+                                    ${wordCount} words
                                 </div>
                             </div>
                         `;
@@ -2262,6 +2315,99 @@
                 localStorage.setItem('personalHistory', JSON.stringify(personalHistory));
             } catch (e) {
                 console.warn('Failed to save personal history', e);
+            }
+        }
+        
+        // Export personal history to text file
+        async function exportPersonalHistory() {
+            try {
+                let history = [];
+                
+                // Get the same data that's displayed in personal history
+                const authToken = localStorage.getItem('authToken');
+                const guestId = localStorage.getItem('guestId');
+                const isAuthenticated = authToken && localStorage.getItem('user');
+                
+                if (isAuthenticated) {
+                    try {
+                        const response = await fetch(`${API_BASE}/api/user/history`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            history = result.history || [];
+                        } else {
+                            const raw = localStorage.getItem('typingHistory');
+                            history = raw ? JSON.parse(raw) : [];
+                        }
+                    } catch (error) {
+                        const raw = localStorage.getItem('typingHistory');
+                        history = raw ? JSON.parse(raw) : [];
+                    }
+                } else if (guestId) {
+                    try {
+                        const response = await fetch(`${API_BASE}/api/guest/history`, {
+                            headers: {
+                                'x-guest-id': guestId
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            history = result.history || [];
+                        } else {
+                            const raw = localStorage.getItem('typingHistory');
+                            history = raw ? JSON.parse(raw) : [];
+                        }
+                    } catch (error) {
+                        const raw = localStorage.getItem('typingHistory');
+                        history = raw ? JSON.parse(raw) : [];
+                    }
+                } else {
+                    const raw = localStorage.getItem('typingHistory');
+                    history = raw ? JSON.parse(raw) : [];
+                }
+                
+                if (history.length === 0) {
+                    alert('No writing history to export.');
+                    return;
+                }
+                
+                // Create export content
+                let exportContent = `My Writing History\n`;
+                exportContent += `Generated on: ${new Date().toLocaleString()}\n`;
+                exportContent += `Total entries: ${history.length}\n`;
+                exportContent += `\n${'='.repeat(50)}\n\n`;
+                
+                history.forEach((entry, index) => {
+                    const date = new Date(entry.timestamp || entry.created_at).toLocaleString();
+                    const text = entry.text || entry.sentence || '';
+                    const wordCount = entry.wordCount || text.split(' ').length;
+                    
+                    exportContent += `Entry ${index + 1} - ${date}\n`;
+                    exportContent += `Words: ${wordCount}\n`;
+                    exportContent += `\n${text}\n\n`;
+                    exportContent += `${'-'.repeat(30)}\n\n`;
+                });
+                
+                // Create and download file
+                const blob = new Blob([exportContent], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `my-writing-history-${new Date().toISOString().split('T')[0]}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                console.log('Export completed successfully');
+            } catch (error) {
+                console.error('Error exporting history:', error);
+                alert('Error exporting history. Please try again.');
             }
         }
 
@@ -2662,6 +2808,16 @@
         }
         
         function updateAuthUI() {
+            // Update logout button visibility
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                if (isAuthenticated) {
+                    logoutBtn.style.display = 'block';
+                } else {
+                    logoutBtn.style.display = 'none';
+                }
+            }
+            
             // Add auth status to controls
             const controlsContent = document.getElementById('controls-content');
             if (controlsContent && !document.getElementById('auth-status')) {

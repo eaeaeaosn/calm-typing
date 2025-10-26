@@ -1,3 +1,6 @@
+// API Configuration
+const API_BASE = window.location.origin;
+
 class CalmTyping {
     constructor() {
         this.currentLetter = document.getElementById('currentLetter');
@@ -479,11 +482,17 @@ class CalmTyping {
                 wordCount: sentence.split(' ').length
             };
             
-            // Check if user is authenticated
-            if (typeof isAuthenticated !== 'undefined' && isAuthenticated && typeof authToken !== 'undefined' && authToken) {
+            // Check authentication status from localStorage
+            const authToken = localStorage.getItem('authToken');
+            const guestId = localStorage.getItem('guestId');
+            const isAuthenticated = authToken && localStorage.getItem('user');
+            
+            console.log('Save status - Auth:', isAuthenticated, 'Guest:', guestId);
+            
+            if (isAuthenticated) {
                 // Save to authenticated user's history
                 await this.saveToUserHistory(historyEntry);
-            } else if (typeof guestId !== 'undefined' && guestId) {
+            } else if (guestId) {
                 // Save to guest session
                 await this.saveToGuestHistory(historyEntry);
             } else {
