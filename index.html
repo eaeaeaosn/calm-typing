@@ -3374,6 +3374,13 @@
         // Welcome overlay helpers (show between auth and interface)
         function showWelcomeIfNeeded() {
             try {
+                // Prevent multiple instances
+                if (window.welcomePageActive) {
+                    console.log('Welcome page already active, skipping');
+                    return;
+                }
+                window.welcomePageActive = true;
+                
                 // Always show welcome page - removed the welcomeSeen check
                 const overlay = document.getElementById('welcome-overlay');
                 if (!overlay) return;
@@ -3383,6 +3390,11 @@
                 const hintEl = document.getElementById('welcome-hint');
                 if (!typeEl) return;
 
+                // Clear any existing timeouts
+                if (window.welcomeTimeout) {
+                    clearTimeout(window.welcomeTimeout);
+                }
+                
                 // Two pages of welcome
                 const pages = [
                     'Hi, welcome to Calm Typing.',
@@ -3392,14 +3404,20 @@
                 let typing = false;
 
                 function typewriterEffect(text, cb) {
+                    // Clear any existing timeouts
+                    if (window.welcomeTimeout) {
+                        clearTimeout(window.welcomeTimeout);
+                    }
+                    
                     typeEl.textContent = '';
                     let i = 0;
                     typing = true;
+                    
                     function typeNext() {
                         if (i < text.length) {
                             typeEl.textContent += text[i];
                             i++;
-                            setTimeout(typeNext, 28 + Math.random()*32);
+                            window.welcomeTimeout = setTimeout(typeNext, 50 + Math.random()*20);
                         } else {
                             typing = false;
                             if (cb) cb();
@@ -3422,6 +3440,7 @@
                 function hide() {
                     overlay.classList.remove('show');
                     overlay.setAttribute('aria-hidden', 'true');
+                    window.welcomePageActive = false; // Reset flag when hidden
                     // Removed localStorage.setItem('welcomeSeen', '1') - always show welcome
                 }
 
