@@ -302,7 +302,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const loginQuery = process.env.NODE_ENV === 'production' 
-      ? 'SELECT * FROM users WHERE username = $1 OR email = $2'
+      ? 'SELECT * FROM users WHERE username = $1 OR email = $1'
       : 'SELECT * FROM users WHERE username = ? OR email = ?';
     
     db.get(loginQuery, [username, username], async (err, user) => {
@@ -310,6 +310,10 @@ app.post('/api/auth/login', async (req, res) => {
         console.error('Database error during login:', err);
         return res.status(500).json({ error: 'Database error' });
       }
+      
+      console.log('Login attempt for:', username);
+      console.log('Query result:', user ? 'User found' : 'No user found');
+      console.log('User data:', user ? { id: user.id, username: user.username, email: user.email } : 'None');
       
       if (!user) {
         return res.status(401).json({ error: 'Invalid credentials' });
