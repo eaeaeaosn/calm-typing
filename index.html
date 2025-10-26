@@ -3018,7 +3018,7 @@
         
         // Audio system: per-background tracks
         let audioTracks = {}; // persistent tracks saved in localStorage (only remote URLs or path strings)
-        const uploadedTracks = {}; // session-only object URLs for uploaded local files
+    let uploadedMusic = null; // single uploaded music for all backgrounds
 
         function loadAudioTracks() {
             try {
@@ -3038,7 +3038,7 @@
         }
 
         function getTrackForBackground(name) {
-            if (uploadedTracks[name]) return uploadedTracks[name];
+            if (uploadedMusic) return uploadedMusic;
             return audioTracks[name] || null;
         }
 
@@ -3074,41 +3074,40 @@
         const audioCurrentLabel = document.getElementById('audio-current-label');
 
         function updateAudioCurrentLabel() {
-            const bg = backgrounds[currentBackground].name;
-            const t = getTrackForBackground(bg);
-            if (t && t.label) {
-                audioCurrentLabel.textContent = `Assigned: ${t.label}`;
-            } else if (t && t.src) {
-                audioCurrentLabel.textContent = `Assigned: ${t.src}`;
+            if (uploadedMusic) {
+                audioCurrentLabel.textContent = `Assigned: ${uploadedMusic.label || uploadedMusic.src}`;
             } else {
-                audioCurrentLabel.textContent = 'No music assigned for current background.';
+                const bg = backgrounds[currentBackground].name;
+                const t = audioTracks[bg];
+                if (t && t.label) {
+                    audioCurrentLabel.textContent = `Assigned: ${t.label}`;
+                } else if (t && t.src) {
+                    audioCurrentLabel.textContent = `Assigned: ${t.src}`;
+                } else {
+                    audioCurrentLabel.textContent = 'No music assigned for current background.';
+                }
             }
         }
 
         // Assign button handler
         if (audioAssignBtn) {
             audioAssignBtn.addEventListener('click', function() {
-                const bg = audioBgSelect.value || 'none';
                 // prefer file upload
                 const file = audioUploadFile.files && audioUploadFile.files[0];
                 const url = (audioUploadUrl.value || '').trim();
                 if (file) {
-                    const obj = URL.createObjectURL(file);
-                    // revoke previous if existed
-                    if (uploadedTracks[bg] && uploadedTracks[bg].isObject) {
-                        try { URL.revokeObjectURL(uploadedTracks[bg].src); } catch(e){}
+                    if (uploadedMusic && uploadedMusic.isObject) {
+                        try { URL.revokeObjectURL(uploadedMusic.src); } catch(e){}
                     }
-                    uploadedTracks[bg] = { src: obj, label: file.name, isObject: true };
-                    // If assigned to currently active background, apply immediately
-                    if (backgrounds[currentBackground].name === bg) applyBackgroundAudio();
+                    const obj = URL.createObjectURL(file);
+                    uploadedMusic = { src: obj, label: file.name, isObject: true };
+                    applyBackgroundAudio();
                     updateAudioCurrentLabel();
                 } else if (url) {
-                    // simple validation
                     try {
                         const parsed = new URL(url);
-                        audioTracks[bg] = { src: parsed.href, label: parsed.href };
-                        saveAudioTracks();
-                        if (backgrounds[currentBackground].name === bg) applyBackgroundAudio();
+                        uploadedMusic = { src: parsed.href, label: parsed.href };
+                        applyBackgroundAudio();
                         updateAudioCurrentLabel();
                     } catch (e) {
                         alert('Please enter a valid URL (must start with http/https).');
@@ -3122,16 +3121,11 @@
         // Remove mapping
         if (audioRemoveBtn) {
             audioRemoveBtn.addEventListener('click', function() {
-                const bg = audioBgSelect.value || 'none';
-                if (uploadedTracks[bg] && uploadedTracks[bg].isObject) {
-                    try { URL.revokeObjectURL(uploadedTracks[bg].src); } catch(e){}
-                    delete uploadedTracks[bg];
+                if (uploadedMusic && uploadedMusic.isObject) {
+                    try { URL.revokeObjectURL(uploadedMusic.src); } catch(e){}
                 }
-                if (audioTracks[bg]) {
-                    delete audioTracks[bg];
-                    saveAudioTracks();
-                }
-                if (backgrounds[currentBackground].name === bg) applyBackgroundAudio();
+                uploadedMusic = null;
+                applyBackgroundAudio();
                 updateAudioCurrentLabel();
             });
         }
@@ -3165,8 +3159,8 @@
 
             let changed = false;
             for (const k of Object.keys(defaults)) {
-                // don't overwrite any user-mapped remote URL or uploaded session file
-                if (!audioTracks[k] && !uploadedTracks[k]) {
+                // don't overwrite any user-mapped remote URL
+                if (!audioTracks[k]) {
                     audioTracks[k] = defaults[k];
                     changed = true;
                 }
