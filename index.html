@@ -248,7 +248,7 @@
             position: fixed;
             top: 80px;
             right: 430px;
-            width: 50px;
+            width: 80px;
             height: 150px;
             background: rgba(240, 240, 240, 0.95);
             border-radius: 12px;
@@ -256,9 +256,23 @@
             z-index: 1000;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             display: none;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .volume-section {
+            display: flex;
             flex-direction: column;
             align-items: center;
-            transition: all 0.3s ease;
+            gap: 5px;
+        }
+        
+        .volume-label {
+            font-size: 10px;
+            color: #666;
+            font-weight: bold;
         }
         
         #volume-slider-container.show {
@@ -269,22 +283,22 @@
             right: 140px;
         }
         
-        #volume-slider-vertical {
+        #bg-volume-slider-vertical, #bubble-volume-slider-vertical {
             writing-mode: bt-lr;
             appearance: slider-vertical;
             -webkit-appearance: slider-vertical;
             width: 8px;
-            height: 100%;
+            height: 100px;
             padding: 0;
             margin: 0;
             accent-color: #888;
             cursor: pointer;
         }
         
-        #volume-value {
-            font-size: 11px;
+        #bg-volume-value, #bubble-volume-value {
+            font-size: 10px;
             color: #666;
-            margin-top: 8px;
+            margin-top: 5px;
             font-weight: 500;
         }
         
@@ -1388,6 +1402,7 @@
     <button id="audio-control" title="White Noise">♪</button>
         <audio id="bg-audio" preload="auto" loop></audio>
         <audio id="alpha-audio" preload="auto" loop src="Audios/Alpha wave.mp3"></audio>
+        <audio id="key-sound" preload="auto" src="Audios/bubble.wav"></audio>
 
         <!-- Alpha Wave Info Modal -->
         <div id="alpha-info-modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:3000; align-items:center; justify-content:center;">
@@ -1492,8 +1507,16 @@
         </script>
     
     <div id="volume-slider-container">
-        <input type="range" id="volume-slider-vertical" min="0" max="100" value="50" orient="vertical">
-        <span id="volume-value">50%</span>
+        <div class="volume-section">
+            <div class="volume-label">Background</div>
+            <input type="range" id="bg-volume-slider-vertical" min="0" max="100" value="50" orient="vertical">
+            <span id="bg-volume-value">50%</span>
+        </div>
+        <div class="volume-section">
+            <div class="volume-label">Bubble</div>
+            <input type="range" id="bubble-volume-slider-vertical" min="0" max="100" value="30" orient="vertical">
+            <span id="bubble-volume-value">30%</span>
+        </div>
     </div>
     
     <div id="controls" class="collapsed">
@@ -1539,6 +1562,16 @@
             
             <div class="section-label">Animal Size: <span class="slider-value" id="animal-size-value">100%</span></div>
             <input type="range" id="animal-size-slider" min="20" max="200" value="100" step="10">
+            
+            <div class="divider"></div>
+            
+            <h3>Keyboard Sound Effects</h3>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                <input type="checkbox" id="key-sound-toggle" checked />
+                <label for="key-sound-toggle" style="font-size:14px; color:#333;">Enable keyboard sound</label>
+            </div>
+            <div class="section-label">Sound Volume: <span class="slider-value" id="key-sound-volume-value">30%</span></div>
+            <input type="range" id="key-sound-volume-slider" min="0" max="100" value="30" step="5">
             
             <div class="divider"></div>
             <h3>Background Music</h3>
@@ -1752,8 +1785,10 @@
         const mountainBg = document.getElementById('mountain-bg');
         const volumeControl = document.getElementById('volume-control');
         const volumeSliderContainer = document.getElementById('volume-slider-container');
-        const volumeSlider = document.getElementById('volume-slider-vertical');
-        const volumeValue = document.getElementById('volume-value');
+        const bgVolumeSlider = document.getElementById('bg-volume-slider-vertical');
+        const bgVolumeValue = document.getElementById('bg-volume-value');
+        const bubbleVolumeSlider = document.getElementById('bubble-volume-slider-vertical');
+        const bubbleVolumeValue = document.getElementById('bubble-volume-value');
     const fishToggle = document.getElementById('fish-toggle');
     const audioControl = document.getElementById('audio-control');
     const bgAudio = document.getElementById('bg-audio');
@@ -1799,6 +1834,8 @@
     let sentenceHistory = [];
     let currentBackground = 0; // 0 = none, 1 = forest, 2 = ocean, 3 = mountain
     let currentVolume = 0.5;
+    let keySoundEnabled = true; // 键盘音效开关
+    let keySoundVolume = 0.3; // 键盘音效音量
         
         const backgrounds = [
             { element: null, icon: createRectIcon(), name: 'none' },
@@ -3180,6 +3217,7 @@
             if (settings.textColor) textColor = settings.textColor;
             if (settings.fontFamily) customFontFamily = settings.fontFamily;
             if (settings.volume) currentVolume = settings.volume;
+            if (settings.bubbleVolume) keySoundVolume = settings.bubbleVolume;
             
             // Update UI elements
             if (document.getElementById('size-slider')) {
@@ -3192,9 +3230,13 @@
             if (document.getElementById('font-select')) {
                 document.getElementById('font-select').value = customFontFamily;
             }
-            if (document.getElementById('volume-slider-vertical')) {
-                document.getElementById('volume-slider-vertical').value = currentVolume * 100;
-                document.getElementById('volume-value').textContent = Math.round(currentVolume * 100) + '%';
+            if (document.getElementById('bg-volume-slider-vertical')) {
+                document.getElementById('bg-volume-slider-vertical').value = currentVolume * 100;
+                document.getElementById('bg-volume-value').textContent = Math.round(currentVolume * 100) + '%';
+            }
+            if (document.getElementById('bubble-volume-slider-vertical')) {
+                document.getElementById('bubble-volume-slider-vertical').value = keySoundVolume * 100;
+                document.getElementById('bubble-volume-value').textContent = Math.round(keySoundVolume * 100) + '%';
             }
         }
         
@@ -3203,7 +3245,8 @@
                 fontSize,
                 textColor,
                 fontFamily: customFontFamily,
-                volume: currentVolume
+                volume: currentVolume,
+                bubbleVolume: keySoundVolume
             };
             
             // Check if we're running on a server
@@ -3693,11 +3736,18 @@
             });
         }
 
-        // Volume should control audio element too
-        volumeSlider.addEventListener('input', function() {
+        // Background volume control
+        bgVolumeSlider.addEventListener('input', function() {
             currentVolume = this.value / 100;
-            volumeValue.textContent = this.value + '%';
+            bgVolumeValue.textContent = this.value + '%';
             if (bgAudio) bgAudio.volume = currentVolume;
+            saveUserSettings();
+        });
+
+        // Bubble volume control
+        bubbleVolumeSlider.addEventListener('input', function() {
+            keySoundVolume = this.value / 100;
+            bubbleVolumeValue.textContent = this.value + '%';
             saveUserSettings();
         });
 
@@ -3716,11 +3766,6 @@
             }
         });
         
-        // Handle volume change
-        volumeSlider.addEventListener('input', function() {
-            currentVolume = this.value / 100;
-            volumeValue.textContent = this.value + '%';
-        });
         
         // Toggle controls panel
         toggleBtn.addEventListener('click', function() {
@@ -3773,6 +3818,23 @@
             document.documentElement.style.setProperty('--animal-scale', size / 100);
         });
         
+        // Keyboard sound controls
+        const keySoundToggle = document.getElementById('key-sound-toggle');
+        const keySoundVolumeSlider = document.getElementById('key-sound-volume-slider');
+        const keySoundVolumeValue = document.getElementById('key-sound-volume-value');
+        
+        // Keyboard sound toggle
+        keySoundToggle.addEventListener('change', function() {
+            keySoundEnabled = this.checked;
+        });
+        
+        // Keyboard sound volume control
+        keySoundVolumeSlider.addEventListener('input', function() {
+            const volume = this.value;
+            keySoundVolumeValue.textContent = volume + '%';
+            keySoundVolume = volume / 100;
+        });
+        
         // Handle font selection
         fontSelect.addEventListener('change', function() {
             customFontFamily = this.value;
@@ -3812,11 +3874,29 @@
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
         
+        // Keyboard sound effect function
+        function playKeySound() {
+            if (!keySoundEnabled) return;
+            
+            const keySound = document.getElementById('key-sound');
+            if (keySound) {
+                keySound.volume = keySoundVolume;
+                keySound.currentTime = 0; // Reset to beginning
+                keySound.play().catch(e => {
+                    // Ignore autoplay errors
+                    console.log('Key sound play failed:', e);
+                });
+            }
+        }
+        
         // Handle typing
         document.addEventListener('keypress', function(e) {
             if (e.target.tagName === 'INPUT') return;
             const char = e.key;
             if (char.length !== 1) return;
+            
+            // Play keyboard sound effect
+            playKeySound();
 
             // Reset on space and save current word with auto-correction
             if (char === ' ') {
