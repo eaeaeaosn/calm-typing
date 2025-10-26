@@ -2817,15 +2817,27 @@
             loadUserSettings();
         }
         
-        // Welcome modal removed: no-op functions to avoid affecting other auth code paths
+        // Authentication modal functions
         function showAuthModal() {
-            // intentionally left blank: welcome modal removed
-            console.log('showAuthModal called, but welcome modal is disabled');
+            const authModal = document.getElementById('auth-modal');
+            if (authModal) {
+                authModal.style.display = 'flex';
+                authModal.classList.add('show');
+                // Focus on the first input
+                const firstInput = authModal.querySelector('input[type="text"], input[type="email"]');
+                if (firstInput) {
+                    setTimeout(() => firstInput.focus(), 100);
+                }
+            }
         }
 
         function hideAuthModal() {
-            // intentionally left blank
-            console.log('hideAuthModal called, but welcome modal is disabled');
+            const authModal = document.getElementById('auth-modal');
+            if (authModal) {
+                authModal.style.display = 'none';
+                authModal.classList.remove('show');
+                clearAuthMessages();
+            }
         }
         
         // Create guest session automatically
@@ -2949,8 +2961,8 @@
             isGuest = false;
             guestId = null;
             updateAuthUI();
-            // Instead of showing the welcome modal, create a guest session so the app continues working
-            createGuestSession();
+            // Show the login modal after logout
+            showAuthModal();
         }
         
         function switchToAuth() {
@@ -2964,8 +2976,19 @@
             localStorage.removeItem('guestId');
             localStorage.removeItem('typingHistory');
             localStorage.removeItem('userSettings');
+            
+            // Reset authentication state
+            isAuthenticated = false;
+            currentUser = null;
+            authToken = null;
+            isGuest = false;
+            guestId = null;
+            
             console.log('All authentication data cleared');
-            location.reload();
+            
+            // Update UI and show login modal
+            updateAuthUI();
+            showAuthModal();
         }
         
         // Authentication form handlers
