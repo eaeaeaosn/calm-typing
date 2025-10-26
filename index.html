@@ -1920,19 +1920,27 @@
         
         // Render word history only
         function renderWordHistory() {
-            if (typingHistory.length === 0) {
-                historyList.innerHTML = '<div class="history-empty" style="color: #999; font-style: italic; padding: 40px 20px; text-align: center;">No words typed yet. Start typing to build your history!</div>';
+            // Get all words from completed sentences
+            const allWords = [];
+            sentenceHistory.forEach(sentence => {
+                if (sentence.text) {
+                    const words = sentence.text.split(/\s+/).filter(word => word.length > 0);
+                    words.forEach(word => {
+                        allWords.push({
+                            text: word,
+                            timestamp: sentence.timestamp
+                        });
+                    });
+                }
+            });
+            
+            if (allWords.length === 0) {
+                historyList.innerHTML = '<div class="history-empty" style="color: #999; font-style: italic; padding: 40px 20px; text-align: center;">No words typed yet. Complete a sentence to see words here!</div>';
             } else {
                 let html = '';
                 html += '<div>';
-                html += typingHistory
-                    .map(item => {
-                        if (item.original && item.original !== item.text) {
-                            return `<span style=\"color: #ff6b6b; text-decoration: line-through;\">${item.original}</span> <span style=\"color: #51cf66;\">${item.text}</span>`;
-                        } else {
-                            return item.text;
-                        }
-                    })
+                html += allWords
+                    .map(item => item.text)
                     .join(' ');
                 html += '</div>';
                 historyList.innerHTML = html;
@@ -2052,20 +2060,48 @@
         // Toggle history modal
         function toggleHistory() {
             historyModal.classList.toggle('show');
+            const instructions = document.getElementById('instructions');
+            const courierReminder = document.getElementById('courier-reminder');
+            
             if (historyModal.classList.contains('show')) {
                 renderHistory();
+                // Hide all typing prompts when history is open
+                if (instructions) {
+                    instructions.style.display = 'none';
+                }
+                if (courierReminder) {
+                    courierReminder.style.display = 'none';
+                }
+            } else {
+                // Show the typing prompts when history is closed
+                if (instructions) {
+                    instructions.style.display = 'block';
+                }
+                if (courierReminder) {
+                    courierReminder.style.display = 'block';
+                }
             }
         }
         
         // Close history modal
         closeHistoryBtn.addEventListener('click', function() {
             historyModal.classList.remove('show');
+            // Show the typing prompts when history is closed
+            const instructions = document.getElementById('instructions');
+            const courierReminder = document.getElementById('courier-reminder');
+            if (instructions) {
+                instructions.style.display = 'block';
+            }
+            if (courierReminder) {
+                courierReminder.style.display = 'block';
+            }
         });
         
         // Clear history
         clearHistoryBtn.addEventListener('click', function() {
             if (confirm('Are you sure you want to clear all typing history?')) {
                 typingHistory = [];
+                sentenceHistory = [];
                 localStorage.removeItem('typingHistory');
                 saveHistory();
                 renderHistory();
@@ -2081,6 +2117,17 @@
         
         // Load history on startup
         loadHistory();
+        
+        // Clear any old random data and initialize clean
+        function initializeCleanHistory() {
+            // Clear any old random data
+            typingHistory = [];
+            // Keep sentenceHistory as it contains real data
+            saveHistory();
+        }
+        
+        // Initialize clean history on page load
+        initializeCleanHistory();
 
         // --- Personal history (sidebar) storage & UI ---
         let personalHistory = [];
@@ -3447,10 +3494,9 @@
             const char = e.key;
             if (char.length !== 1) return;
             
-            // Reset on space and save current word with auto-correction
+            // Reset on space (don't save individual words)
             if (char === ' ') {
                 if (currentWord.length > 0) {
-                    addToHistory(currentWord.trim());
                     currentWord = '';
                 }
                 currentSentence += ' ';
@@ -3468,29 +3514,21 @@
 
             // If period, treat as end of sentence
             if (char === '.') {
-                // Save current word if any
-                if (currentWord.length > 0) {
-                    addToHistory(currentWord.trim());
-                    currentWord = '';
-                }
-                // Save sentence for revision
+                // Save complete sentence for revision
                 const sentenceToCheck = currentSentence.trim();
                 if (sentenceToCheck.length > 0) {
                     addSentenceToHistory(sentenceToCheck);
                 }
+                currentWord = '';
                 currentSentence = '';
                 charPosition = 0;
                 return;
             }
             
-            // Auto-reset after 1 second of no typing with auto-correction
-            resetTimeout = setTimeout(async () => {
-                if (currentWord.length > 0) {
-                    await addToHistory(currentWord.trim());
-                    currentWord = '';
-                }
-                charPosition = 0;
-            }, 1000);
+            // Clear any existing timeout
+            if (resetTimeout) {
+                clearTimeout(resetTimeout);
+            }
         });
         
         // Reset position on Enter and save word/sentence
@@ -3503,14 +3541,12 @@
             }
             
             if (e.key === 'Enter') {
-                if (currentWord.length > 0) {
-                    addToHistory(currentWord.trim());
-                    currentWord = '';
-                }
+                // Only save complete sentences, not individual words
                 if (currentSentence.trim().length > 0) {
                     addSentenceToHistory(currentSentence.trim());
                     currentSentence = '';
                 }
+                currentWord = '';
                 charPosition = 0;
             }
         });
