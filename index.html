@@ -2925,7 +2925,7 @@
             // Update logout button visibility
             const logoutBtn = document.getElementById('logout-btn');
             if (logoutBtn) {
-                if (isAuthenticated) {
+                if (isAuthenticated || isGuest) {
                     logoutBtn.style.display = 'block';
                 } else {
                     logoutBtn.style.display = 'none';
