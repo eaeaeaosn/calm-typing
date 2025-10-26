@@ -2052,14 +2052,29 @@
         // Toggle history modal
         function toggleHistory() {
             historyModal.classList.toggle('show');
+            const instructions = document.getElementById('instructions');
             if (historyModal.classList.contains('show')) {
                 renderHistory();
+                // Hide the typing prompt when history is open
+                if (instructions) {
+                    instructions.style.display = 'none';
+                }
+            } else {
+                // Show the typing prompt when history is closed
+                if (instructions) {
+                    instructions.style.display = 'block';
+                }
             }
         }
         
         // Close history modal
         closeHistoryBtn.addEventListener('click', function() {
             historyModal.classList.remove('show');
+            // Show the typing prompt when history is closed
+            const instructions = document.getElementById('instructions');
+            if (instructions) {
+                instructions.style.display = 'block';
+            }
         });
         
         // Clear history
@@ -3447,10 +3462,9 @@
             const char = e.key;
             if (char.length !== 1) return;
             
-            // Reset on space and save current word with auto-correction
+            // Reset on space (don't save individual words)
             if (char === ' ') {
                 if (currentWord.length > 0) {
-                    addToHistory(currentWord.trim());
                     currentWord = '';
                 }
                 currentSentence += ' ';
@@ -3468,29 +3482,21 @@
 
             // If period, treat as end of sentence
             if (char === '.') {
-                // Save current word if any
-                if (currentWord.length > 0) {
-                    addToHistory(currentWord.trim());
-                    currentWord = '';
-                }
-                // Save sentence for revision
+                // Save complete sentence for revision
                 const sentenceToCheck = currentSentence.trim();
                 if (sentenceToCheck.length > 0) {
                     addSentenceToHistory(sentenceToCheck);
                 }
+                currentWord = '';
                 currentSentence = '';
                 charPosition = 0;
                 return;
             }
             
-            // Auto-reset after 1 second of no typing with auto-correction
-            resetTimeout = setTimeout(async () => {
-                if (currentWord.length > 0) {
-                    await addToHistory(currentWord.trim());
-                    currentWord = '';
-                }
-                charPosition = 0;
-            }, 1000);
+            // Clear any existing timeout
+            if (resetTimeout) {
+                clearTimeout(resetTimeout);
+            }
         });
         
         // Reset position on Enter and save word/sentence
@@ -3503,14 +3509,12 @@
             }
             
             if (e.key === 'Enter') {
-                if (currentWord.length > 0) {
-                    addToHistory(currentWord.trim());
-                    currentWord = '';
-                }
+                // Only save complete sentences, not individual words
                 if (currentSentence.trim().length > 0) {
                     addSentenceToHistory(currentSentence.trim());
                     currentSentence = '';
                 }
+                currentWord = '';
                 charPosition = 0;
             }
         });
