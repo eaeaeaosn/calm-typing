@@ -56,6 +56,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Floating Type Animation</title>
     <style>
+        :root {
+            --fish-scale: 1;
+            --bird-scale: 1;
+            --animal-scale: 1;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -955,6 +961,87 @@
             padding: 0 15px;
         }
         
+        /* Animal effects styling */
+        .fish {
+            position: absolute;
+            font-size: 4.2rem;
+            opacity: 1;
+            animation: fish-float 2s ease-out forwards;
+            will-change: transform, opacity;
+            transform: scale(var(--fish-scale, 1));
+        }
+        
+        .fish.shark {
+            font-size: 5.2rem;
+            animation-duration: 2s;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transform-origin: center;
+            transform: scale(var(--fish-scale, 1));
+        }
+        
+        .bird {
+            position: absolute;
+            font-size: 4.2rem;
+            opacity: 1;
+            animation: bird-float 2s ease-out forwards;
+            will-change: transform, opacity;
+            transform: scale(var(--bird-scale, 1));
+        }
+        
+        .animal {
+            position: absolute;
+            font-size: 4.2rem;
+            opacity: 1;
+            animation: animal-float 2s ease-out forwards;
+            will-change: transform, opacity;
+            transform: scale(var(--animal-scale, 1));
+        }
+        
+        @keyframes fish-float {
+            0% {
+                transform: translate(0, 0) scale(var(--fish-scale, 1)) rotate(0deg);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(30px, -100px) scale(calc(var(--fish-scale, 1) * 1.1)) rotate(5deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translate(80px, -200px) scale(calc(var(--fish-scale, 1) * 1.2)) rotate(10deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes bird-float {
+            0% {
+                transform: translate(0, 0) scale(var(--bird-scale, 1)) rotate(0deg);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(30px, -100px) scale(calc(var(--bird-scale, 1) * 1.1)) rotate(5deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translate(80px, -200px) scale(calc(var(--bird-scale, 1) * 1.2)) rotate(10deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes animal-float {
+            0% {
+                transform: translate(0, 0) scale(var(--animal-scale, 1)) rotate(0deg);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(30px, -100px) scale(calc(var(--animal-scale, 1) * 1.1)) rotate(5deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translate(80px, -200px) scale(calc(var(--animal-scale, 1) * 1.2)) rotate(10deg);
+                opacity: 0;
+            }
+        }
+        
         .error-message {
             background: #ffebee;
             color: #c62828;
@@ -1440,6 +1527,18 @@
             <div class="section-label">Or Upload Custom Font:</div>
             <input type="file" id="font-upload" accept=".ttf,.otf" />
             <div class="info">Upload .ttf or .otf file</div>
+            
+            <div class="divider"></div>
+            
+            <h3>Animal Size Controls</h3>
+            <div class="section-label">Fish Size: <span class="slider-value" id="fish-size-value">100%</span></div>
+            <input type="range" id="fish-size-slider" min="20" max="200" value="100" step="10">
+            
+            <div class="section-label">Bird Size: <span class="slider-value" id="bird-size-value">100%</span></div>
+            <input type="range" id="bird-size-slider" min="20" max="200" value="100" step="10">
+            
+            <div class="section-label">Animal Size: <span class="slider-value" id="animal-size-value">100%</span></div>
+            <input type="range" id="animal-size-slider" min="20" max="200" value="100" step="10">
             
             <div class="divider"></div>
             <h3>Background Music</h3>
@@ -3242,6 +3341,38 @@
             saveUserSettings();
         });
         
+        // Animal size controls
+        const fishSizeSlider = document.getElementById('fish-size-slider');
+        const fishSizeValue = document.getElementById('fish-size-value');
+        const birdSizeSlider = document.getElementById('bird-size-slider');
+        const birdSizeValue = document.getElementById('bird-size-value');
+        const animalSizeSlider = document.getElementById('animal-size-slider');
+        const animalSizeValue = document.getElementById('animal-size-value');
+        
+        // Fish size control
+        fishSizeSlider.addEventListener('input', function() {
+            const size = this.value;
+            fishSizeValue.textContent = size + '%';
+            // Apply fish size scaling
+            document.documentElement.style.setProperty('--fish-scale', size / 100);
+        });
+        
+        // Bird size control
+        birdSizeSlider.addEventListener('input', function() {
+            const size = this.value;
+            birdSizeValue.textContent = size + '%';
+            // Apply bird size scaling
+            document.documentElement.style.setProperty('--bird-scale', size / 100);
+        });
+        
+        // Animal size control
+        animalSizeSlider.addEventListener('input', function() {
+            const size = this.value;
+            animalSizeValue.textContent = size + '%';
+            // Apply animal size scaling
+            document.documentElement.style.setProperty('--animal-scale', size / 100);
+        });
+        
         // Handle font selection
         fontSelect.addEventListener('change', function() {
             customFontFamily = this.value;
@@ -3361,11 +3492,32 @@
             charElement.textContent = text;
             charElement.style.fontFamily = customFontFamily;
             charElement.style.fontSize = fontSize + 'px';
+
+            // 保持字符间隔逻辑 + 坐标循环效果
+            const charWidth = Math.max(60, Math.round(fontSize * 0.9));
+            const totalChars = Math.max(position + 1, 1);
+            const screenWidth = window.innerWidth;
+            const availableWidth = screenWidth - 40; // 留出边距
             
-            // Position characters in a line with spacing
-            const charWidth = 90; // spacing between characters
-            const startX = -((charPosition + 1) * charWidth / 2); // center the line
-            const offsetX = startX + (position * charWidth);
+            // 保持现有的字符间隔逻辑（距离控制效果）
+            const baseX = -(totalChars * charWidth / 2) + (position * charWidth);
+            
+            // 坐标循环处理：从中间开始，向右延伸，触及边界时跳到另一端
+            let charX = baseX;
+            
+            // 如果字符超出右边界，跳到左边界继续
+            if (charX > availableWidth / 2) {
+                const overflowX = charX - availableWidth / 2;
+                charX = -availableWidth / 2 + overflowX;
+            }
+            
+            // 如果字符超出左边界，跳到右边界继续
+            if (charX < -availableWidth / 2) {
+                const overflowX = charX + availableWidth / 2;
+                charX = availableWidth / 2 + overflowX;
+            }
+            
+            const offsetX = charX;
             charElement.style.left = `calc(50% + ${offsetX}px)`;
             charElement.style.top = '50%';
             
@@ -3380,11 +3532,10 @@
             setTimeout(() => {
                 charElement.remove();
                 activeChars--;
-                
-                // Reset position when all chars are cleared
-                if (activeChars === 0) {
-                    charPosition = 0;
-                }
+                // 移除位置重置逻辑，让字符持续循环
+                // if (activeChars === 0) {
+                //     charPosition = 0;
+                // }
             }, 1200);
         }
         
@@ -3430,6 +3581,15 @@
             }
 
             function now() { return performance.now(); }
+            
+            // Background detection functions
+            function isMountainActive() {
+                return currentBackground === 3; // mountain
+            }
+            
+            function isForestActive() {
+                return currentBackground === 1; // forest
+            }
 
             function getKeyPos(key) {
                 const rows = {
@@ -3471,7 +3631,16 @@
                 if (state.layer.children.length >= cfg.maxConcurrency && !isShark) return;
 
                 const el = document.createElement('span');
-                el.className = 'fish' + (isShark ? ' shark' : '');
+                // 根据背景类型选择CSS类
+                let className = 'fish';
+                if (isShark) {
+                    className += ' shark';
+                } else if (isMountainActive()) {
+                    className = 'bird';
+                } else if (isForestActive()) {
+                    className = 'animal';
+                }
+                el.className = className;
                 el.textContent = emoji || cfg.fishEmojis[0];
                 el.style.left = pos.x + 'px';
                 el.style.top  = pos.y + 'px';
