@@ -56,6 +56,115 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Floating Type Animation</title>
     <style>
+        /* Minimal glowing Courier reminder */
+        #courier-reminder {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2.1rem;
+            color: #888;
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+            text-shadow: 0 0 18px #1976d2, 0 0 8px #fff, 0 0 2px #1976d2, 0 0 16px #888;
+            z-index: 5000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s cubic-bezier(.4,2,.6,1);
+        }
+        #courier-reminder.show {
+            opacity: 1;
+        }
+        /* Welcome overlay styles */
+        .welcome-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.45);
+            backdrop-filter: blur(10px) saturate(120%);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
+            z-index: 4000;
+            pointer-events: auto;
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+
+        .welcome-overlay.hidden { opacity: 0; visibility: hidden; transform: translateY(-6px); pointer-events: none; }
+
+        .welcome-card {
+            width: min(920px, 92%);
+            max-width: 1100px;
+            padding: 48px 36px;
+            border-radius: 18px;
+            background: transparent;
+            box-shadow: none;
+            text-align: center;
+            position: relative;
+            overflow: visible;
+        }
+
+        .welcome-title {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(44px, 8vw, 110px);
+            line-height: 1;
+            color: #111;
+            font-weight: 700;
+            margin-bottom: 18px;
+            text-shadow: 0 12px 36px rgba(0,0,0,0.08);
+            letter-spacing: 0.6px;
+        }
+
+        .welcome-subtitle {
+            font-family: Arial, sans-serif;
+            font-size: clamp(18px, 2.6vw, 28px);
+            color: #444;
+            margin-bottom: 28px;
+            opacity: 0.95;
+        }
+
+        .welcome-controls { display:flex; gap:12px; justify-content:center; }
+
+        .welcome-btn {
+            padding: 12px 18px;
+            border-radius: 12px;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+            background: #1976d2;
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(25,118,210,0.18);
+        }
+
+        .welcome-btn.secondary {
+            background: transparent;
+            color: #1976d2;
+            border: 1px solid rgba(25,118,210,0.12);
+            box-shadow: none;
+        }
+
+        .welcome-floating { position:absolute; inset:0; pointer-events:none; }
+        .welcome-floating .char { font-size: clamp(24px, 4vw, 48px); opacity:0.95; text-shadow:0 0 18px rgba(0,0,0,0.08); transition: opacity 2.4s ease, transform 2.4s ease; }
+
+        /* Typewriter caret */
+        .typewriter-caret::after {
+            content: "|";
+            display: inline-block;
+            margin-left: 6px;
+            opacity: 0.95;
+            animation: welcome-blink 1s steps(2, start) infinite;
+            color: #1976d2;
+            transform: translateY(-2px);
+        }
+
+        @keyframes welcome-blink {
+            0% { opacity: 1 }
+            50% { opacity: 0 }
+            100% { opacity: 1 }
+        }
         * {
             margin: 0;
             padding: 0;
@@ -975,6 +1084,30 @@
     </style>
 </head>
 <body>
+    <div id="courier-reminder">Start typing anywhere...</div>
+    
+    <!-- Welcome overlay: two pages -->
+    <div id="welcome-overlay" class="welcome-overlay hidden" aria-hidden="true">
+        <div class="welcome-card" role="dialog" aria-modal="true" aria-label="Welcome to CalmType">
+            <div class="welcome-floating" id="welcome-floating"></div>
+
+            <div class="welcome-page" data-page="1">
+                <div class="welcome-title" id="welcome-title-1">Hi, This is CalmType</div>
+                <div class="welcome-subtitle">A calm typing experience — take your time.</div>
+            </div>
+
+            <div class="welcome-page" data-page="2" style="display:none;">
+                <div class="welcome-title" id="welcome-title-2">Start typing anywhere.</div>
+                <div class="welcome-subtitle">Type to create soft floating characters and relax.</div>
+            </div>
+
+            <div class="welcome-controls">
+                <button class="welcome-btn" id="welcome-next">Next</button>
+                <button class="welcome-btn secondary" id="welcome-skip">Skip</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Forest Background -->
     <div id="forest-bg" class="svg-background">
         <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
@@ -4088,6 +4221,137 @@
                     window.open('README.md', '_blank');
                 } catch (err) {
                     alert('See the project README for more details.');
+                }
+            });
+        })();
+        
+        // Welcome overlay and courier reminder functionality
+        (function() {
+            const welcomeOverlay = document.getElementById('welcome-overlay');
+            const courierReminder = document.getElementById('courier-reminder');
+            const welcomeNext = document.getElementById('welcome-next');
+            const welcomeSkip = document.getElementById('welcome-skip');
+            const welcomeFloating = document.getElementById('welcome-floating');
+            
+            let welcomePage = 1;
+            let courierReminderTimeout = null;
+            let courierReminderIdleTimeout = null;
+            
+            // Show welcome overlay on first visit
+            function showWelcome() {
+                if (localStorage.getItem('calmtype-welcome-shown') === 'true') {
+                    return;
+                }
+                welcomeOverlay.classList.remove('hidden');
+                welcomeOverlay.setAttribute('aria-hidden', 'false');
+                startWelcomeTypewriter();
+            }
+            
+            // Start typewriter effect for welcome titles
+            function startWelcomeTypewriter() {
+                const title1 = document.getElementById('welcome-title-1');
+                const title2 = document.getElementById('welcome-title-2');
+                
+                if (title1) {
+                    typewriterEffect(title1, 'Hi, This is CalmType');
+                }
+            }
+            
+            // Typewriter effect function
+            function typewriterEffect(element, text) {
+                element.textContent = '';
+                let i = 0;
+                const timer = setInterval(() => {
+                    if (i < text.length) {
+                        element.textContent += text.charAt(i);
+                        i++;
+                    } else {
+                        clearInterval(timer);
+                        element.classList.add('typewriter-caret');
+                    }
+                }, 100);
+            }
+            
+            // Welcome navigation
+            function nextWelcomePage() {
+                const currentPage = document.querySelector(`[data-page="${welcomePage}"]`);
+                const nextPage = document.querySelector(`[data-page="${welcomePage + 1}"]`);
+                
+                if (currentPage) currentPage.style.display = 'none';
+                if (nextPage) {
+                    nextPage.style.display = 'block';
+                    const title2 = document.getElementById('welcome-title-2');
+                    if (title2) {
+                        typewriterEffect(title2, 'Start typing anywhere.');
+                    }
+                    welcomePage++;
+                } else {
+                    closeWelcome();
+                }
+            }
+            
+            function closeWelcome() {
+                welcomeOverlay.classList.add('hidden');
+                welcomeOverlay.setAttribute('aria-hidden', 'true');
+                localStorage.setItem('calmtype-welcome-shown', 'true');
+                showCourierReminder();
+            }
+            
+            // Courier reminder functions
+            function showCourierReminder() {
+                if (courierReminder) {
+                    courierReminder.classList.add('show');
+                }
+            }
+            
+            function hideCourierReminder() {
+                if (courierReminder) {
+                    courierReminder.classList.remove('show');
+                }
+            }
+            
+            function resetCourierReminderIdle() {
+                clearTimeout(courierReminderIdleTimeout);
+                courierReminderIdleTimeout = setTimeout(showCourierReminder, 2000);
+            }
+            
+            // Event listeners
+            if (welcomeNext) {
+                welcomeNext.addEventListener('click', nextWelcomePage);
+            }
+            
+            if (welcomeSkip) {
+                welcomeSkip.addEventListener('click', closeWelcome);
+            }
+            
+            // Close welcome on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !welcomeOverlay.classList.contains('hidden')) {
+                    closeWelcome();
+                }
+            });
+            
+            // Hide reminder and reset idle timer on any typing
+            document.addEventListener('keydown', function(e) {
+                if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter' || e.key === ' ') {
+                    hideCourierReminder();
+                    resetCourierReminderIdle();
+                }
+            });
+            
+            // Show reminder after idle, and on page load
+            window.addEventListener('DOMContentLoaded', function() {
+                setTimeout(showWelcome, 600);
+                document.addEventListener('mousemove', resetCourierReminderIdle, { once: true });
+            });
+            
+            // Hide instructions after first keypress
+            let firstKey = true;
+            document.addEventListener('keypress', function() {
+                if (firstKey) {
+                    hideCourierReminder();
+                    if (typingTimeout) clearTimeout(typingTimeout);
+                    firstKey = false;
                 }
             });
         })();

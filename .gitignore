@@ -48,3 +48,9 @@ pids
 # Temporary files
 *.tmp
 *.temp
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+database.sqlite
