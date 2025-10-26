@@ -2061,16 +2061,24 @@
         function toggleHistory() {
             historyModal.classList.toggle('show');
             const instructions = document.getElementById('instructions');
+            const courierReminder = document.getElementById('courier-reminder');
+            
             if (historyModal.classList.contains('show')) {
                 renderHistory();
-                // Hide the typing prompt when history is open
+                // Hide all typing prompts when history is open
                 if (instructions) {
                     instructions.style.display = 'none';
                 }
+                if (courierReminder) {
+                    courierReminder.style.display = 'none';
+                }
             } else {
-                // Show the typing prompt when history is closed
+                // Show the typing prompts when history is closed
                 if (instructions) {
                     instructions.style.display = 'block';
+                }
+                if (courierReminder) {
+                    courierReminder.style.display = 'block';
                 }
             }
         }
@@ -2078,10 +2086,14 @@
         // Close history modal
         closeHistoryBtn.addEventListener('click', function() {
             historyModal.classList.remove('show');
-            // Show the typing prompt when history is closed
+            // Show the typing prompts when history is closed
             const instructions = document.getElementById('instructions');
+            const courierReminder = document.getElementById('courier-reminder');
             if (instructions) {
                 instructions.style.display = 'block';
+            }
+            if (courierReminder) {
+                courierReminder.style.display = 'block';
             }
         });
         
